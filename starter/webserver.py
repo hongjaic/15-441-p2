@@ -87,8 +87,10 @@ def rd_getrd(p):
 
         return Response(generate(rdurl))
     elif '404' in rdresponse:
+        rdsock.close()
         return render_template('./static/404NotFound.html'), 404
     
+    rdsock.close()
     return render_template('./static/index.html')
 
 @app.route('/rd/addfile/<int:p>', methods=["POST"])
@@ -124,8 +126,10 @@ def rd_addfile(p):
     rdresponse = rdclientsock.recv(4096)
 
     if 'OK' in rdresponse:
+        rdsock.close()
         return render_template('./static/index.html')
 
+    rdsock.close()
     return render_template('./static/index.html')
 
 
@@ -171,8 +175,10 @@ def rd_getrdpeer(p, obj):
 
         return Response(generate(rdurl))
     elif '404' in rdresponse:
+        rdsock.close()
         return render_template('./static/404NotFound.html'), 404
     
+    rdsock.close()
     return render_template('./static/index.html')
 
 	
