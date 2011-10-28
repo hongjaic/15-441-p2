@@ -18,16 +18,9 @@
 
 
 
-void hash_add(hasht *ht,char *name, char *uri, int cost){
-	
-}
 
-path *paths_get(char * name){
 
- 	return NULL;
-}
-
-int hash_add_my_objs(hasht *ht,FILE *files_fd, int port){
+int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 
 
 	int i = 0;
@@ -87,8 +80,9 @@ int hash_add_my_objs(hasht *ht,FILE *files_fd, int port){
 
 void add_node( node **head,int id, char *host,int route_p, int local_p, int server_p){
 	node **new_node = head;
-	while(*new_node != NULL){
-		*new_node = (*new_node)->next_node;
+	printf("add_node\n");
+    while(*new_node != NULL){
+        *new_node = (*new_node)->next_node;
 	}
 
 	(*new_node) = (node *)malloc(sizeof(node));
@@ -180,8 +174,9 @@ void new_connection(int sock,int *fd_high, fd_set *master_fd_list){
 	struct sockaddr_storage client_addr; // client address
 	socklen_t cli_size = sizeof(client_addr);
 	
+    printf("trying to accept\n");
 	flask_sock = accept(sock,(struct sockaddr *) &client_addr, &cli_size);
-			
+	printf("accepted\n");
 	if (flask_sock == FAIL){
 		close(flask_sock);						
 	}else{
@@ -283,7 +278,7 @@ int main(int argc, char* argv[]){
 	FILE *conf_fd;
 	FILE * files_fd;
 
-	node *nodes;
+	node *nodes = NULL;
 
 	//int node_count = 0;
 	int flask_sock;
@@ -317,7 +312,7 @@ int main(int argc, char* argv[]){
 	fd_set master_fd_list;
 	fd_set write_fd_list;
 	path * host_path_s;
-	hasht *ht = (hasht *)malloc(sizeof(hasht));	
+	liso_hash *ht = (liso_hash *)malloc(sizeof(liso_hash));	
 	
 	if(check_input(argc,argv) == FAIL){
 		usage();
@@ -347,14 +342,14 @@ int main(int argc, char* argv[]){
 	rt[nodes->id][1]=nodes->id;
 	rt[nodes->id][2] = 0;
 
-	socket_setup(&flask_sock,nodes->local_p,PF_LOCAL,SOCK_STREAM);
+	socket_setup(&flask_sock,nodes->local_p,PF_INET,SOCK_STREAM);
 	/*
 	socket_setup(&ospf_sock,nodes->route_p,PF_INET,SOCK_DGRAM);
 	if(ospf_sock > flask_sock){
 		fd_high = ospf_sock+1;
 	}else{
 	*/
-		fd_high = flask_sock+1;
+		fd_high = flask_sock;
 	//}
 
 	sprintf(my_uri,"http://127.0.0.1:%d",nodes->local_p);
@@ -403,7 +398,8 @@ int main(int argc, char* argv[]){
 		for(i=0;i<=fd_high;i++){
 			if(FD_ISSET(i,&read_fd_list)){		
 				if(i == flask_sock /* ||i == ospf_sock */){ //new connection
-					new_connection(i,&fd_high, &master_fd_list);
+					printf("trying to connect\n");
+                    new_connection(i,&fd_high, &master_fd_list);
 			
 				}else{
 					memset(buf,0,MAX_BUF_LEN);
@@ -414,11 +410,11 @@ int main(int argc, char* argv[]){
 						cmd = strtok(buf," ");
 						if(strcmp(cmd,"RDGET") == 0){
 							name = strtok(NULL," ");
-							host_path_s = paths_get(name);
+							host_path_s = get_paths(ht,name);
 							if(host_path_s == NULL){
-								send(i,"NF",2, 0);
+								send(i,"404",3, 0);
 							}else{
-								sprintf(tmp,"OK %s",host_path_s->uri);
+								sprintf(tmp,"200 %s",host_path_s->uri);
 								send(i,tmp,strlen(tmp), 0);
 							}
 						}else if(strcmp(cmd,"ADDFILE")==0){ // add file to local node
@@ -431,7 +427,7 @@ int main(int argc, char* argv[]){
 							strcat(my_uri,tmp);							
 							hash_add(ht,name,my_uri,0);
 							my_uri[my_uri_len] = '\0';
-							send(i,"OK",2, 0);
+							send(i,"200",3, 0);
 						}/* 
 						else{ // OSPF message
 							updater_id= atoi(cmd);
@@ -456,10 +452,10 @@ int main(int argc, char* argv[]){
 
 						}
 						*/
-					}
-					
-					close(i);
-					FD_CLR(i,&master_fd_list);					
+					} else {
+					    close(i);
+					    FD_CLR(i,&master_fd_list);
+                    }
 				}
 			} /*
 			else if(FD_ISSET(i,&write_fd_list)){

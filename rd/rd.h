@@ -1,8 +1,7 @@
-#ifndef LISOD_H_
-#define LISOD_H_
+#ifndef RD_H_
+#define RD_H_
 
-
-
+#include "hashset.h"
 
 #define SUCCESS 1
 #define FAIL -1
@@ -27,21 +26,6 @@ typedef struct _node{
 	struct _node * next_node;
 
 }node;
-
-
-typedef struct _path{
-
-	char uri[MAX_URI_LEN];
-	int cost;
-	struct _path *next_path;
-
-}path;
-
-
-typedef struct _hasht{
-	int dummy;
-	
-}hasht;
 #endif /*LISOD_H_*/
 
 

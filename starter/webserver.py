@@ -55,13 +55,17 @@ def index():
 
 @app.route('/rd/<int:p>', methods=["GET"])
 def rd_getrd(p):
-    objname = request.forms['object']
+    objname = request.form['object']
 
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
 
+    print "to rd: RDGET " + objname
+
     rdsock.send('RDGET ' + objname)
     rdresponse = rdclientsock.recv(4096)
+
+    print rdresponse
     rdsock.close()
 
     response = build_response(rdresponse)
@@ -103,10 +107,17 @@ def rd_addfile(p):
     return response
 
 
-@app.route('/rd/<int:p>/<obj>', methods=["GET"])
+@app.route('/rd/<int:p><obj>', methods=["GET"])
 def rd_getrdpeer(p, obj):
+    print 'debug'
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    rdsock.connect((localhost, p))
+    print 'before connect'
+
+    print localhost
+
+    print p
+    rdsock.connect((localhost, 5000))
+    print 'after connect'
 
     rdsock.send('RDGET ' + obj)
     rdresponse = rdclientsock.recv(4096)
