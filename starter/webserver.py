@@ -65,12 +65,16 @@ def rd_getrd(p):
     rdsock.close()
 
     responsewords = string.split(rdresponse)
+    responsestatus = responsewords[0]
 
-    if responsewords[0] == 'OK':
+    if responsestatus == '200':
         rdurl = responsewords[1]
-        return Response(generate(rdurl))
-    elif '404' in rdresponse:
-        return render_template('./static/404NotFound.html'), 404
+        return Response(generate(rdurl), status=200)
+    elif responsestatus == '404'
+        #return render_template('./static/404NotFound.html'), 404
+        return Response(status=404)
+    elif responsestatus == '500'
+        return Response(status=500)
     
     return render_template('./static/index.html')
 
@@ -104,7 +108,10 @@ def rd_addfile(p):
     rdresponse = rdclientsock.recv(4096)
     rdsock.close()
 
-    if 'OK' in rdresponse:
+    responsewords = string.split(rdresponse)
+    responsestatus = responsewords[0]
+
+    if responsestatus == '200'
         return render_template('./static/index.html')
 
     return render_template('./static/index.html')
@@ -120,12 +127,14 @@ def rd_getrdpeer(p, obj):
     rdsock.close()
 
     responsewords = string.split(rdresponse)
+    responsesatus = responsewords[0]
 
-    if responsewords[0] == 'OK':
+    if responsestatus == '200':
         rdurl = responsewords[1]
         return Response(generate(rdurl))
-    elif '404' in rdresponse:
-        return render_template('./static/404NotFound.html'), 404
+    elif esponsestatus == '404'
+        #return render_template('./static/404NotFound.html'), 404
+        return Response(status=404)
     
     return render_template('./static/index.html')
 
@@ -142,6 +151,9 @@ def generate(url):
         yield strm
         
     fp.close()
+
+def send_response(rdresponse):
+    if status == '200':
 
 if __name__ == '__main__':
 	if (len(sys.argv) > 1):
