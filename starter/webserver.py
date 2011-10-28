@@ -64,19 +64,9 @@ def rd_getrd(p):
     rdresponse = rdclientsock.recv(4096)
     rdsock.close()
 
-    responsewords = string.split(rdresponse)
-    responsestatus = responsewords[0]
+    response = build_response(rdresponse)
 
-    if responsestatus == '200':
-        rdurl = responsewords[1]
-        return Response(generate(rdurl), status=200)
-    elif responsestatus == '404'
-        #return render_template('./static/404NotFound.html'), 404
-        return Response(status=404)
-    elif responsestatus == '500'
-        return Response(status=500)
-    
-    return render_template('./static/index.html')
+    return response
 
 @app.route('/rd/addfile/<int:p>', methods=["POST"])
 def rd_addfile(p):
@@ -108,13 +98,9 @@ def rd_addfile(p):
     rdresponse = rdclientsock.recv(4096)
     rdsock.close()
 
-    responsewords = string.split(rdresponse)
-    responsestatus = responsewords[0]
+    response = build_response(rdresponse)
 
-    if responsestatus == '200'
-        return render_template('./static/index.html')
-
-    return render_template('./static/index.html')
+    return response
 
 
 @app.route('/rd/<int:p>/<obj>', methods=["GET"])
@@ -126,17 +112,11 @@ def rd_getrdpeer(p, obj):
     rdresponse = rdclientsock.recv(4096)
     rdsock.close()
 
-    responsewords = string.split(rdresponse)
-    responsesatus = responsewords[0]
+    resposne = build_response(rdresponse);
 
-    if responsestatus == '200':
-        rdurl = responsewords[1]
-        return Response(generate(rdurl))
-    elif esponsestatus == '404'
-        #return render_template('./static/404NotFound.html'), 404
-        return Response(status=404)
-    
-    return render_template('./static/index.html')
+    print response
+
+    return response
 
 
 def generate(url):
@@ -152,8 +132,18 @@ def generate(url):
         
     fp.close()
 
-def send_response(rdresponse):
-    if status == '200':
+def build_response(rdresponse):
+    responsewords = string.split(rdresponse)
+    status = responsewords[0]
+    url = responsewords[1]
+
+    if status != '200':
+        return Response(status=status)
+    
+    if request.method == 'GET':
+        return Response(generate(url))
+    
+    return Response(status=200)
 
 if __name__ == '__main__':
 	if (len(sys.argv) > 1):
