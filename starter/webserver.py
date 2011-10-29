@@ -64,7 +64,7 @@ def rd_getrd(p):
     print "to rd: RDGET " + objname
 
     rdsock.send('RDGET ' + objname)
-    rdresponse = rdclientsock.recv(4096)
+    rdresponse = rdsock.recv(4096)
 
     print rdresponse
     rdsock.close()
@@ -100,7 +100,7 @@ def rd_addfile(p):
     rdsock.connect((localhost, p))
 
     rdsock.send('ADDFILE ' + finalname)
-    rdresponse = rdclientsock.recv(4096)
+    rdresponse = rdsock.recv(4096)
     rdsock.close()
 
     response = build_response(rdresponse)
@@ -114,7 +114,7 @@ def rd_getrdpeer(p, obj):
     rdsock.connect((localhost, 5000))
 
     rdsock.send('RDGET ' + obj)
-    rdresponse = rdclientsock.recv(4096)
+    rdresponse = rdsock.recv(4096)
     rdsock.close()
 
     resposne = build_response(rdresponse);
@@ -137,7 +137,7 @@ def generate(url):
     fp.close()
 
 def build_response(rdresponse):
-    responsewords = string.split(rdresponse)
+    responsewords = rdresponse.split()
     status = responsewords[0]
     url = responsewords[1]
 

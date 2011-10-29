@@ -29,14 +29,16 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 	char name[MAX_OBJ_LEN];
 	char uri[MAX_URI_LEN];
 	int go = 1;
-	int uri_len = strlen(uri);
+	
 	sprintf(uri,"http://127.0.0.1:%d",port);
+	int uri_len = strlen(uri);
 	j = uri_len;
 	
 
 	while(go){
 		
 
+		printf("%s\n",uri);			
 		while (car != ' '){
 
 			if((car = fgetc(files_fd)) == EOF){
@@ -390,20 +392,24 @@ int main(int argc, char* argv[]){
 			
 				}else{
 					ret = recv(i, buf, MAX_BUF_LEN, 0);
-					printf("buf %s\n",buf);			
 					if( ret > 0){
 						
 						
 						cmd = strtok(buf," ");
+					
+						printf("%s\n%s\n",buf,cmd);
 						if(strcmp(cmd,"RDGET") == 0){
 							name = strtok(NULL," ");
 							host_path_s = get_paths(ht,name);
+							
 							if(host_path_s == NULL){
 								send(i,"404",3, 0);
 							}else{
+						
 								sprintf(tmp_str,"200 %s",host_path_s->uri);
 								send(i,tmp_str,strlen(tmp_str), 0);
-							}
+								printf("sending:\n\t %s\n",tmp_str);
+							}	
 						}else if(strcmp(cmd,"ADDFILE")==0){ // add file to local node
 							name = strtok(NULL," ");
 							tmp = strtok(NULL," ");
@@ -415,6 +421,7 @@ int main(int argc, char* argv[]){
 							hash_add(ht,name,my_uri,0);
 							my_uri[my_uri_len] = '\0';
 							send(i,"200",3, 0);
+							printf("sent OK ADD\n");
 						}/* 
 						else{ // OSPF message
 							updater_id= atoi(cmd);
