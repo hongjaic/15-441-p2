@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import with_statement
-ALLDIRS = ['/afs/andrew.cmu.edu/usr21/hongjaic/flask_env/lib/python2.6/site-packages']
+ALLDIRS = ['/home/raul/flask-env/lib/python2.7/site-packages']
 
 """webserver.py"""
 
@@ -155,3 +155,4 @@ if __name__ == '__main__':
 		app.run(host='0.0.0.0', port=servport, threaded=True, processes=1)
 	else:	
 		print "Usage ./webserver <server-port> \n"
+

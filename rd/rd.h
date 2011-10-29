@@ -26,6 +26,9 @@ typedef struct _node{
 	struct _node * next_node;
 
 }node;
+
+
+
 #endif /*LISOD_H_*/
 
 
