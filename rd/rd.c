@@ -397,13 +397,12 @@ int main(int argc, char* argv[]){
 						
 						cmd = strtok(buf," ");
 					
-						printf("%s\n%s\n",buf,cmd);
 						if(strcmp(cmd,"RDGET") == 0){
 							name = strtok(NULL," ");
 							host_path_s = get_paths(ht,name);
 							
 							if(host_path_s == NULL){
-								send(i,"404",3, 0);
+								send(i,"404 NF",7, 0);
 							}else{
 						
 								sprintf(tmp_str,"200 %s",host_path_s->uri);
@@ -413,6 +412,8 @@ int main(int argc, char* argv[]){
 						}else if(strcmp(cmd,"ADDFILE")==0){ // add file to local node
 							name = strtok(NULL," ");
 							tmp = strtok(NULL," ");
+						
+							printf("cmd:%s\npath:%s\n",cmd,name);
 							files_fd = fopen(argv[2],"a");
 							fprintf(files_fd,"%s %s\n",name,tmp);
 							fclose(files_fd);

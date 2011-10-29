@@ -66,7 +66,7 @@ def rd_getrd(p):
     rdsock.send('RDGET ' + objname)
     rdresponse = rdsock.recv(4096)
 
-    print rdresponse
+    print 'received: ' + rdresponse
     rdsock.close()
 
     response = build_response(rdresponse)
@@ -75,7 +75,8 @@ def rd_getrd(p):
 
 @app.route('/rd/addfile/<int:p>', methods=["POST"])
 def rd_addfile(p):
-    objname = request.fomrs['object']
+    objname = request.form['object']
+
     file = request.files['uploadFile']
 
     tmpname = tempfile.mktemp(prefix='./static/')
@@ -95,14 +96,16 @@ def rd_addfile(p):
 
     finalname = './static/' + hash.hexdigest()
     shutil.move(tmpname, finalname)
-
+   
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
-
     rdsock.send('ADDFILE ' + finalname)
+    #rdsock.send('ADDFILE srini2 /static/test')
+
     rdresponse = rdsock.recv(4096)
     rdsock.close()
 
+    print 'received: ' + rdresponse
     response = build_response(rdresponse)
 
     return response
@@ -116,8 +119,7 @@ def rd_getrdpeer(p, obj):
     rdsock.send('RDGET ' + obj)
     rdresponse = rdsock.recv(4096)
     rdsock.close()
-
-    resposne = build_response(rdresponse);
+    response = build_response(rdresponse);
 
     return response
 
@@ -138,14 +140,14 @@ def generate(url):
 
 def build_response(rdresponse):
     responsewords = rdresponse.split()
+    
     status = responsewords[0]
-    url = responsewords[1]
-
     if status != '200':
         return Response(status=status)
     
     if request.method == 'GET':
-        return Response(generate(url))
+          url = responsewords[1]
+	  return Response(generate(url))
     
     return Response(status=200)
 
