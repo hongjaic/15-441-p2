@@ -77,56 +77,42 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 	return SUCCESS;
 }
 
+void init_nodes(node nodes[], FILE *conf_fd,int *count){
 
-void add_node( node **head,int id, char *host,int route_p, int local_p, int server_p){
-	node **new_node = head;
-	printf("add_node\n");
-    while(*new_node != NULL){
-        *new_node = (*new_node)->next_node;
-	}
-
-	(*new_node) = (node *)malloc(sizeof(node));
-	(*new_node)->id = id;
-	strcpy((*new_node)->host,host);
-	(*new_node)->route_p=route_p;
-	(*new_node)->local_p = local_p;
-	(*new_node)->server_p = server_p;
-	(*new_node)->next_node = NULL;
-
-}	
-
-void init_nodes(node **head_node, FILE *conf_fd){
-
-
-	int id;
-	char host[MAX_HOST_LEN];
-	int route_p;
-	int local_p;
-	int server_p;
 	char buf[MAX_READ_LEN];
 	char *ptr;
-
-
-	while(fgets(buf,MAX_READ_LEN,conf_fd) != NULL){
+	
+	
+	while(count < MAX_NODES && fgets(buf,MAX_READ_LEN,conf_fd) != NULL){
 
 		ptr = strtok(buf," ");
-		id = atoi(ptr);
+		nodes[count]->id=atoi(ptr);
+		
+		ptr = strtok(NULL," ");
+		strcpy(nodes[count]->host,ptr);
 
 		ptr = strtok(NULL," ");
-		strcpy(host,ptr);
+		nodes[count]->route_p= atoi(ptr);
 
 		ptr = strtok(NULL," ");
-		route_p = atoi(ptr);
+		nodes[count]->local_p= atoi(ptr);
 
 		ptr = strtok(NULL," ");
-		local_p= atoi(ptr);
+		nodes[count]->server_p = atoi(ptr);
+		count++;
 
-		ptr = strtok(NULL," ");
-		server_p = atoi(ptr);
-
-
-		add_node(head_node,id,host,route_p,local_p,server_p);
 	
+		
+	}
+
+	while(count < MAX_NODES){
+
+		nodes[count]->id=-1;
+		nodes[count]->host = "";
+		nodes[count]->route_p= -1;
+		nodes[count]->local_p= -1;
+		nodes[count]->server_p = -1;
+		count++;
 		
 	}
 
@@ -278,8 +264,8 @@ int main(int argc, char* argv[]){
 	FILE *conf_fd;
 	FILE * files_fd;
 
-	node *nodes = NULL;
-
+	node nodes[MAX_NODES];
+	node * my_node;
 	//int node_count = 0;
 	int flask_sock;
 	//int ospf_sock;
@@ -326,13 +312,16 @@ int main(int argc, char* argv[]){
 	init_nodes(&nodes,conf_fd);
 
 	fclose(conf_fd);
+
 	
 	files_fd = fopen(argv[2],"r");
 
-	hash_add_my_objs(ht,files_fd,nodes->local_p);
+	my_node = nodes[0];
+	hash_add_my_objs(ht,files_fd,my_node->local_p);
 
 	fclose(files_fd);
 		
+	/*
 	for(i=0;i<MAX_NODES;i++){
 		rt[i][0]=i;
 		rt[i][1]=-1;
@@ -341,8 +330,8 @@ int main(int argc, char* argv[]){
 
 	rt[nodes->id][1]=nodes->id;
 	rt[nodes->id][2] = 0;
-
-	socket_setup(&flask_sock,nodes->local_p,PF_INET,SOCK_STREAM);
+	*/
+	socket_setup(&flask_sock,my_node->local_p,PF_INET,SOCK_STREAM);
 	/*
 	socket_setup(&ospf_sock,nodes->route_p,PF_INET,SOCK_DGRAM);
 	if(ospf_sock > flask_sock){
@@ -352,7 +341,7 @@ int main(int argc, char* argv[]){
 		fd_high = flask_sock;
 	//}
 
-	sprintf(my_uri,"http://127.0.0.1:%d",nodes->local_p);
+	sprintf(my_uri,"http://127.0.0.1:%d",my_node->local_p);
 	my_uri_len = strlen(my_uri);
 
 	FD_ZERO(&write_fd_list);
@@ -364,7 +353,6 @@ int main(int argc, char* argv[]){
 	printf("wating for flask connection\n");
 
 	while (run){
-
 		/*
 		if(update_neighbors() == 1){
 			str = build_ospf_str();
@@ -457,32 +445,13 @@ int main(int argc, char* argv[]){
 					    FD_CLR(i,&master_fd_list);
                     }
 				}
-			} /*
-			else if(FD_ISSET(i,&write_fd_list)){
-
-				
-				for(j = 0; j< MAX_NODES;j++){
-					if(ack_timeout[j][0]==i){
-						try_send = ack_timeout[j][0];
-						break;
-					}
-				}
-			
-				if(reached_timeout(timer){
-					try_send = YES;
-				}
-
-
-				if(try_send == YES){		
-					sendto(i,str);
-					ack_timeout[i][0]= NOT_YET;
-					timer = 0;
-					start_timer(timer);
-			
-				}
-				
 			} 
-			*/
+			 
+			if(FD_ISSET(i,&write_fd_list)){
+
+						
+			} 
+			
 		}
 	}
 
