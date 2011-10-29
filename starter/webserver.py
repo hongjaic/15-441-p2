@@ -36,6 +36,7 @@ for item in list(sys.path):
 
 
 from flask import Flask, redirect, url_for, request
+import flask
 
 app = Flask(__name__)
 
@@ -55,8 +56,8 @@ def index():
 
 @app.route('/rd/<int:p>', methods=["GET"])
 def rd_getrd(p):
-    objname = request.form['object']
-
+    objname = request.args.get('object')
+    
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
 
@@ -107,17 +108,10 @@ def rd_addfile(p):
     return response
 
 
-@app.route('/rd/<int:p><obj>', methods=["GET"])
+@app.route('/rd/<int:p>/<obj>', methods=["GET"])
 def rd_getrdpeer(p, obj):
-    print 'debug'
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print 'before connect'
-
-    print localhost
-
-    print p
     rdsock.connect((localhost, 5000))
-    print 'after connect'
 
     rdsock.send('RDGET ' + obj)
     rdresponse = rdclientsock.recv(4096)
@@ -125,10 +119,9 @@ def rd_getrdpeer(p, obj):
 
     resposne = build_response(rdresponse);
 
-    print response
-
     return response
 
+#@app.route('/rd/<int:p>
 
 def generate(url):
     fp = urllib.urlopen(url)
