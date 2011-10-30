@@ -54,20 +54,22 @@ conffile = open('node1.conf')
 conffirstline = conffile.readline()
 localconf = conffirstline.split()
 
+locport = int(localconf[3])
 servport = localconf[4]
 
 conffile.close()
-
 @app.route('/')
 def index():
 	return redirect(url_for('static', filename='index.html'))
 
-@app.route('/rd/<int:p>', methods=["GET"])
-def rd_getrd(p):
+@app.route('/r',methods=["GET"])
+def rd_getrd():
     objname = request.args.get('object')
     
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    rdsock.connect((localhost, p))
+    
+ 
+    rdsock.connect((localhost,locport))
 
     rdsock.send('RDGET ' + objname)
     rdresponse = rdsock.recv(4096)
@@ -78,7 +80,6 @@ def rd_getrd(p):
 
     status = responsewords[0]
     url = responsewords[1]
-
     if status == '200':
         resp = flask.send_file(urllib.urlopen(responsewords[1]))
     elif status == '404':
@@ -88,8 +89,9 @@ def rd_getrd(p):
 
     return resp
 
-@app.route('/rd/addfile/<int:p>', methods=["POST"])
-def rd_addfile(p):
+
+@app.route('/r',methods=["POST"])
+def rd_addfile():
     curr_root = os.getcwd()
     
     objname = request.form['object']
@@ -118,7 +120,7 @@ def rd_addfile(p):
     f.close()
    
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    rdsock.connect((localhost, p))
+    rdsock.connect((localhost, locport))
     rdsock.send('ADDFILE ' + str(objname) + ' ' + str(finalname))
 
     rdresponse = rdsock.recv(4096)
@@ -139,7 +141,7 @@ def rd_addfile(p):
 @app.route('/rd/<int:p>/<obj>', methods=["GET"])
 def rd_getrdpeer(p, obj):
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    rdsock.connect((localhost, 5000))
+    rdsock.connect((localhost, locport))
 
     rdsock.send('RDGET ' + obj)
     rdresponse = rdsock.recv(4096)
