@@ -82,20 +82,14 @@ def rd_getrd(p):
 
 @app.route('/rd/addfile/<int:p>', methods=["POST"])
 def rd_addfile(p):
-    print 'trying to add file'
-    print os.getcwd()
-
     curr_root = os.getcwd()
     
     objname = request.form['object']
-
-    print objname
 
     file = request.files['uploadFile']
 
     tmpname = tempfile.mktemp(prefix=curr_root + '/static/')
 
-    print tmpname
     file.save(tmpname)
 
     hash = hashlib.sha256()
@@ -113,14 +107,10 @@ def rd_addfile(p):
     finalname = '/static/' + hash.hexdigest()
     shutil.move(tmpname, curr_root + finalname)
 
-    print finalname
    
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
     rdsock.send('ADDFILE ' + str(objname) + ' ' + str(finalname))
-    #rdsock.send('ADDFILE srini2 /static/test')
-
-    print 'ADDFILE FUCK ' + objname + ' ' + str(finalname)
 
     rdresponse = rdsock.recv(4096)
     rdsock.close()
@@ -129,12 +119,10 @@ def rd_addfile(p):
 
     status = responsewords[0]
     
-    print 'received: ' + rdresponse
-    
     if responsewords[0] == '200':
-        resp = flask.Response(status=200)
+        resp = redirect(url_for('static', filename='index.html'))
     else:
-        resp = flask.Response(status=500)
+        resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
 
     return resp
 
