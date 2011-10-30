@@ -50,6 +50,12 @@ if localhost == '127.0.0.1':
     output = commands.getoutput('/sbin/ifconfig')
     localhost = parseaddress(output)
 
+conffile = open('node1.conf')
+conffirstline = conffile.readline()
+localconf = conffirstline.split()
+
+servport = localconf[4]
+
 @app.route('/')
 def index():
 	return redirect(url_for('static', filename='index.html'))
@@ -167,9 +173,8 @@ def generate(url):
 
 
 if __name__ == '__main__':
-	if (len(sys.argv) > 1):
-		servport = int(sys.argv[1])
-		app.run(host='0.0.0.0', port=servport, threaded=True, processes=1)
+	if (len(sys.argv) > 0):
+		app.run(host='0.0.0.0', port=int(servport), threaded=True, processes=1)
 	else:	
-		print "Usage ./webserver <server-port> \n"
+		print "Usage ./webserver\n"
 
