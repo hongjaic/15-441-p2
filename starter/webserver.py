@@ -63,14 +63,24 @@ def index():
 	return redirect(url_for('static', filename='index.html'))
 
 @app.route('/r',methods=["GET"])
-def rd_getrd():
+    
+def get_redir():
+    
+
     objname = request.args.get('object')
     
+    return redirect(url_for('static', filename='f/'+objname))
+   
+
+@app.route('/static/f/<obj>')
+def rd_getrd(obj):
+
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
  
     rdsock.connect((localhost,locport))
 
+    objname = str(obj)
     rdsock.send('RDGET ' + objname)
     rdresponse = rdsock.recv(4096)
 
@@ -80,6 +90,7 @@ def rd_getrd():
 
     status = responsewords[0]
     url = responsewords[1]
+
     if status == '200':
         resp = flask.send_file(urllib.urlopen(responsewords[1]))
     elif status == '404':
@@ -137,7 +148,7 @@ def rd_addfile():
 
     return resp
 
-
+'''
 @app.route('/rd/<int:p>/<obj>', methods=["GET"])
 def rd_getrdpeer(p, obj):
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -161,7 +172,7 @@ def rd_getrdpeer(p, obj):
         resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
 
     return resp
-
+'''
 
 def generate(url):
     fp = urllib.urlopen(url)

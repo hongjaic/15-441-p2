@@ -15,7 +15,7 @@
                &#60;<a href="mailto:xxxxx@andrew.cmu.edu">xxxxx@andrew.cmu.edu
                     </a>&#62;</p>
 			<p> Use Distributed HTTP service to search for object below: </p>
-			<form name="input" action="/rd/5000" method="get">
+			<form name="input" action="/r" method="get">
 			Object name: <input type="text" name="object" />
 			<input type="submit" value="Submit" />
 			</form>
@@ -23,7 +23,7 @@
 
 
 			<p> Upload and post a file along with its corresponding object name: </p>
-			<form action="/rd/addfile/5000" enctype="multipart/form-data" method="post">
+			<form action="/r" enctype="multipart/form-data" method="post">
 			Select file: <input type="file" name="uploadFile">
 			Object Name: <input type="text" name="object" >
 			<input type="submit" value="Upload File" />
