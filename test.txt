@@ -1,0 +1,1 @@
+We tested our system by opening up a web browser and making requests to the web server. we did get requests for files that existed and didn't excist. we did add requests for new files. and then we did get requests again for the newly added file. 
