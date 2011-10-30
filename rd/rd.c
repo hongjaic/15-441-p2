@@ -33,7 +33,7 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 
     gethostname(hostname, MAX_URI_LEN);
 	
-	sprintf(uri,"http://%s:%d", hostname, 9999);
+	sprintf(uri,"http://%s:%d", hostname, 5001);
 	int uri_len = strlen(uri);
 	j = uri_len;
 	

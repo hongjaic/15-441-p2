@@ -56,6 +56,8 @@ localconf = conffirstline.split()
 
 servport = localconf[4]
 
+conffile.close()
+
 @app.route('/')
 def index():
 	return redirect(url_for('static', filename='index.html'))
@@ -113,6 +115,7 @@ def rd_addfile(p):
     finalname = '/static/' + hash.hexdigest()
     shutil.move(tmpname, curr_root + finalname)
 
+    f.close()
    
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
