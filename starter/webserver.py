@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import with_statement
-ALLDIRS = ['/home/raul/flask-env/lib/python2.7/site-packages']
+ALLDIRS = ['/afs/andrew.cmu.edu/usr21/hongjaic/flask_env/lib/python2.6/site-packages']
 
 """webserver.py"""
 
@@ -61,30 +61,46 @@ def rd_getrd(p):
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
 
-    print "to rd: RDGET " + objname
-
     rdsock.send('RDGET ' + objname)
     rdresponse = rdsock.recv(4096)
 
-    print 'received: ' + rdresponse
     rdsock.close()
 
-    response = build_response(rdresponse)
+    responsewords = rdresponse.split()
 
-    return response
+    status = responsewords[0]
+    url = responsewords[1]
+
+    if status == '200':
+        resp = flask.send_file(urllib.urlopen(responsewords[1]))
+    elif status == '404':
+        resp = flask.make_response(flask.render_template('404NotFound.html'), 404)
+    else:
+        resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
+
+    return resp
 
 @app.route('/rd/addfile/<int:p>', methods=["POST"])
 def rd_addfile(p):
+    print 'trying to add file'
+    print os.getcwd()
+
+    curr_root = os.getcwd()
+    
     objname = request.form['object']
+
+    print objname
 
     file = request.files['uploadFile']
 
-    tmpname = tempfile.mktemp(prefix='./static/')
+    tmpname = tempfile.mktemp(prefix=curr_root + '/static/')
+
+    print tmpname
     file.save(tmpname)
 
     hash = hashlib.sha256()
 
-    f = file.open(tmpname)
+    f = open(tmpname, 'r')
 
     while True:
         fdata = f.read(4096)
@@ -92,23 +108,35 @@ def rd_addfile(p):
         if len(fdata) == 0:
             break
 
-        hash.upate(fdata)
+        hash.update(fdata)
 
-    finalname = './static/' + hash.hexdigest()
-    shutil.move(tmpname, finalname)
+    finalname = '/static/' + hash.hexdigest()
+    shutil.move(tmpname, curr_root + finalname)
+
+    print finalname
    
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, p))
-    rdsock.send('ADDFILE ' + finalname)
+    rdsock.send('ADDFILE ' + str(objname) + ' ' + str(finalname))
     #rdsock.send('ADDFILE srini2 /static/test')
+
+    print 'ADDFILE FUCK ' + objname + ' ' + str(finalname)
 
     rdresponse = rdsock.recv(4096)
     rdsock.close()
 
-    print 'received: ' + rdresponse
-    response = build_response(rdresponse)
+    responsewords = rdresponse.split()
 
-    return response
+    status = responsewords[0]
+    
+    print 'received: ' + rdresponse
+    
+    if responsewords[0] == '200':
+        resp = flask.Response(status=200)
+    else:
+        resp = flask.Response(status=500)
+
+    return resp
 
 
 @app.route('/rd/<int:p>/<obj>', methods=["GET"])
@@ -121,9 +149,20 @@ def rd_getrdpeer(p, obj):
     rdsock.close()
     response = build_response(rdresponse);
 
-    return response
+    responsewords = rdresponse.split()
 
-#@app.route('/rd/<int:p>
+    status = responsewords[0]
+    url = responsewords[1]
+
+    if status == '200':
+        resp = flask.send_file(urllib.urlopen(responsewords[1]))
+    elif status == '404':
+        resp = flask.make_response(flask.render_template('404NotFound.html'), 404)
+    else:
+        resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
+
+    return resp
+
 
 def generate(url):
     fp = urllib.urlopen(url)
@@ -138,18 +177,6 @@ def generate(url):
         
     fp.close()
 
-def build_response(rdresponse):
-    responsewords = rdresponse.split()
-    
-    status = responsewords[0]
-    if status != '200':
-        return Response(status=status)
-    
-    if request.method == 'GET':
-          url = responsewords[1]
-	  return Response(generate(url))
-    
-    return Response(status=200)
 
 if __name__ == '__main__':
 	if (len(sys.argv) > 1):

@@ -26,11 +26,14 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 	int i = 0;
 	int j= 0;
 	char car = '0';
+    char hostname[MAX_URI_LEN];
 	char name[MAX_OBJ_LEN];
 	char uri[MAX_URI_LEN];
 	int go = 1;
+
+    gethostname(hostname, MAX_URI_LEN);
 	
-	sprintf(uri,"http://127.0.0.1:%d",port);
+	sprintf(uri,"http://%s:%d", hostname, 9999);
 	int uri_len = strlen(uri);
 	j = uri_len;
 	
@@ -283,6 +286,10 @@ int main(int argc, char* argv[]){
 	char buf[MAX_BUF_LEN];
 	//int rt[150][3];	
 	int node_count = 0;
+
+    char hostname[MAX_URI_LEN];
+
+    gethostname(hostname, MAX_URI_LEN);
 	
 	/*	
 	int updater_id;
@@ -342,7 +349,7 @@ int main(int argc, char* argv[]){
 		fd_high = flask_sock;
 	//}
 
-	sprintf(my_uri,"http://127.0.0.1:%d",my_node->local_p);
+	sprintf(my_uri,"http://%s:%d", hostname, my_node->local_p);
 	my_uri_len = strlen(my_uri);
 
 	FD_ZERO(&write_fd_list);
@@ -398,6 +405,8 @@ int main(int argc, char* argv[]){
 						cmd = strtok(buf," ");
 					
 						if(strcmp(cmd,"RDGET") == 0){
+
+                            printf("SHITT");
 							name = strtok(NULL," ");
 							host_path_s = get_paths(ht,name);
 							
