@@ -325,7 +325,7 @@ int main(int argc, char* argv[]){
 	files_fd = fopen(argv[2],"r");
 
 	my_node = &nodes[0];
-	hash_add_my_objs(ht,files_fd,my_node->local_p);
+	hash_add_my_objs(ht,files_fd,my_node->server_p);
 
 	fclose(files_fd);
 		
@@ -349,7 +349,7 @@ int main(int argc, char* argv[]){
 		fd_high = flask_sock;
 	//}
 
-	sprintf(my_uri,"http://%s:%d", hostname, my_node->local_p);
+	sprintf(my_uri,"http://%s:%d", hostname, my_node->server_p);
 	my_uri_len = strlen(my_uri);
 
 	FD_ZERO(&write_fd_list);
@@ -406,7 +406,6 @@ int main(int argc, char* argv[]){
 					
 						if(strcmp(cmd,"RDGET") == 0){
 
-                            printf("SHITT");
 							name = strtok(NULL," ");
 							host_path_s = get_paths(ht,name);
 							

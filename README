@@ -1,0 +1,23 @@
+ Authors: Raul Gonzalez, Hong Jai
+
+this is a distributed network of nodes, that clients can connect to to retrieve files from the system or add new files into the system. a single node consists of both a routing daemon and a webserver.
+
+	rd.c:	routing daemon, figures out where the objects are stored on the system and tells the webserver. Needs a .conf file sothat it can communicate with other nodes, and a .files file to keep track of the local objects 
+	webserver.py:	webserver interface to clients. queries the routing daemon,fetches the files from the system and returns them to the client. also, adds files to the local node.
+
+
+SETUP:
+
+	in /rd directory:
+		>Make
+		>./rd node.conf node.files
+	
+	in /starter directory:
+		>./webserver.py
+
+	open up web browser and type:
+		http://<webserver-IP>:<webserver-PORT>
+
+	NOTE: the webserver-PORT must be the same as the server port number in the first line of the .conf file.
+
+
