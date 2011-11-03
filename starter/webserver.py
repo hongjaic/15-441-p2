@@ -81,7 +81,7 @@ def rd_getrd(obj):
     rdsock.connect((localhost,locport))
 
     objname = str(obj)
-    rdsock.send('RDGET ' + objname)
+    rdsock.send('RDGET ' + objname+'\r\n')
     rdresponse = rdsock.recv(4096)
 
     rdsock.close()
@@ -90,11 +90,12 @@ def rd_getrd(obj):
 
     status = responsewords[0]
     url = responsewords[1]
+    
 
-    if status == '200':
-        resp = flask.send_file(urllib.urlopen(responsewords[1]))
+    if status == 'OK':
+        resp = flask.send_file(urllib.urlopen(url))
     elif status == '404':
-        resp = flask.make_response(flask.render_template('404NotFound.html'), 404)
+        resp = flask.make_response(flask.render_template('404.html'), 404)
     else:
         resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
 
@@ -132,7 +133,7 @@ def rd_addfile():
    
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, locport))
-    rdsock.send('ADDFILE ' + str(objname) + ' ' + str(finalname))
+    rdsock.send('ADDFILE ' + str(objname) + ' ' + str(finalname)+'\r\n')
 
     rdresponse = rdsock.recv(4096)
     rdsock.close()
@@ -141,7 +142,7 @@ def rd_addfile():
 
     status = responsewords[0]
     
-    if responsewords[0] == '200':
+    if responsewords[0] == 'OK':
         resp = redirect(url_for('static', filename='index.html'))
     else:
         resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
@@ -167,7 +168,7 @@ def rd_getrdpeer(p, obj):
     if status == '200':
         resp = flask.send_file(urllib.urlopen(responsewords[1]))
     elif status == '404':
-        resp = flask.make_response(flask.render_template('404NotFound.html'), 404)
+        resp = flask.make_response(flask.render_template('404.html'), 404)
     else:
         resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
 

@@ -14,7 +14,7 @@ default: rd
 #testfile:
 #	@gcc test.c hashset.c -o testfile -Wall -Werror
 
-rd:
+rd: rd.c
 	@gcc rd.c hashset.c -o rd -g -Wall -Werror
 
 clean:

@@ -17,6 +17,10 @@
 #include "rd.h"
 
 
+char my_uri[MAX_URI_LEN];
+fd_set master_wfds;
+fd_set master_rfds;
+
 
 
 
@@ -26,22 +30,22 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 	int i = 0;
 	int j= 0;
 	char car = '0';
-    char hostname[MAX_URI_LEN];
+   
 	char name[MAX_OBJ_LEN];
-	char uri[MAX_URI_LEN];
+
 	int go = 1;
 
-    gethostname(hostname, MAX_URI_LEN);
+  
 	
-	sprintf(uri,"http://%s:%d", hostname, 5001);
-	int uri_len = strlen(uri);
-	j = uri_len;
-	
+
+	int my_uri_len = strlen(my_uri);
+	j = my_uri_len;
+
+	printf("default URI: %s\n", my_uri);	
 
 	while(go){
 		
 
-		printf("%s\n",uri);			
 		while (car != ' '){
 
 			if((car = fgetc(files_fd)) == EOF){
@@ -62,7 +66,7 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 
 		while (car != '\r' && car!='\n'){
 			if((car = fgetc(files_fd)) != EOF){
-				uri[j++] = car;		
+				my_uri[j++] = car;		
 			}else{
 				go = 0;
 				break;
@@ -70,12 +74,13 @@ int hash_add_my_objs(liso_hash *ht,FILE *files_fd, int port){
 
 			//printf("!%c!\n",uri[j-1]);		
 		}
-		uri[j-1] = '\0';
+		my_uri[j-1] = '\0';
 
-		hash_add(ht,name,uri,0);		
+		printf("local object: %s at path:%s\n\n",name,my_uri);
+		hash_add(ht,name,my_uri,0);		
 		i = 0;
-		j = uri_len;
-
+		j = my_uri_len;
+		
 
 	}
 
@@ -126,56 +131,64 @@ void init_nodes(node nodes[], FILE *conf_fd,int *count){
 
 
 
-int socket_setup(int *sock, int port,int domain,int type){
+void socket_setup(int *sock, int port,int domain,int type){
 
 	struct sockaddr_in addr; 
-	int res = FAIL;
 	int yes = 1;
 
 	/************ SERVER SOCKET SETUP ************/
-	if ((*sock = socket(domain, type, 0)) != -1){ //PF_LOCAL
+	if ((*sock = socket(domain, type, 0)) == -1){ //PF_LOCAL
+		exit(EXIT_FAILURE);
+	}
 	 
-		if(domain == PF_INET){
-			addr.sin_family = AF_INET;
+	if(domain == PF_INET){
+		addr.sin_family = AF_INET;
+	}else{
+		addr.sin_family = AF_LOCAL;
+	}		
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = INADDR_ANY; //NOT ANY	
+	// lose the "address already in use" error message
+	setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
-		}else{
-			addr.sin_family = AF_LOCAL;
-		}		
-		addr.sin_port = htons(port);
-		addr.sin_addr.s_addr = INADDR_ANY; //NOT ANY	
-		// lose the "address already in use" error message
-		setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+	if (bind(*sock, (struct sockaddr *) &addr, sizeof(addr))== -1 ){
+		exit(EXIT_FAILURE);
+	}
 
-  		if (!bind(*sock, (struct sockaddr *) &addr, sizeof(addr))){
-			if (!listen(*sock,5)){
-				res = SUCCESS;
-			}
-		}
+	if (listen(*sock,5)== -1){
+		exit(EXIT_FAILURE);
 	}
 	
-	 return res;
 }
 
 
 
-void new_connection(int sock,int *fd_high, fd_set *master_fd_list){
+int new_connection(connection *connections[],int sock,int *fd_high ){
 
-	int redir_sock;
+	int redir;
 	struct sockaddr_storage client_addr; // client address
 	socklen_t cli_size = sizeof(client_addr);
 	
-	redir_sock = accept(sock,(struct sockaddr *) &client_addr, &cli_size);
-	if (redir_sock == FAIL){
-		close(redir_sock);						
-	}else{
-		
-		if (redir_sock > *fd_high){    // keep track of the max
-			*fd_high = redir_sock;
-		}
-
-		FD_SET(redir_sock, master_fd_list);
-							
+	redir = accept(sock,(struct sockaddr *) &client_addr, &cli_size);
+	if (redir == FAIL){
+		return FAIL;	
 	}
+	if(connections[redir] == NULL){
+		connections[redir] = (connection *)malloc(sizeof(connection));
+	}
+	
+
+
+	connections[redir]->buf[0]='\0';
+	connections[redir]->resp[0]='\0';
+							
+
+	if (redir > *fd_high){    // keep track of the max
+		*fd_high = redir;
+	}
+	FD_SET(redir, &master_rfds);
+	
+	return SUCCESS;
 
 }
 
@@ -261,73 +274,134 @@ void usage(){
 }
 
 
+int recv_data(liso_hash *ht,connection *curr_connection,int sock,char *my_objs_file){
+
+	char * cmd;
+	char * name;
+	char *tmp_uri;
+	char tmp_str[MAX_BUF_LEN];
+	FILE * files_fd;
+
+	int my_uri_len;
+	
+	path * host_path_s;
+	int ret;
+	char buf[MAX_BUF_LEN];
+	memset(buf,0,MAX_BUF_LEN);
+	my_uri_len = strlen(my_uri);
+
+
+	ret = recv(sock, buf, MAX_BUF_LEN, 0);
+	if( ret < 0){
+		return FAIL;
+	}
+	
+	if( ret == 0){
+		close(sock);
+		FD_CLR(sock,&master_rfds);
+		FD_CLR(sock,&master_wfds);
+		return CLOSED  ;   
+	}
+
+
+	strcat(curr_connection->buf,buf);
+ 	if(strstr(curr_connection->buf,"\r\n") == NULL){
+		return SUCCESS;
+	}
+
+	cmd = strtok(buf," ");
+	name = strtok(NULL," ");
+
+	if(strcmp(cmd,"RDGET") == 0){
+
+		name[strlen(name)-2]='\0';
+		host_path_s = get_paths(ht,name);
+			
+		if(host_path_s == NULL){
+				strcpy(curr_connection->resp,"404 NF\r\n");
+		}else{
+			sprintf(tmp_str,"OK %s\r\n",host_path_s->uri);
+			strcpy(curr_connection->resp,tmp_str);
+		}	
+	}else if(strcmp(cmd,"ADDFILE")==0){ // add file to local node
+		tmp_uri = strtok(NULL," ");
+		tmp_uri[strlen(tmp_uri)-2]='\0';
+
+		files_fd = fopen(my_objs_file,"a");
+		fprintf(files_fd,"%s %s\n",name,tmp_uri);
+		fclose(files_fd);
+		
+		strcat(my_uri,tmp_uri);							
+		hash_add(ht,name,my_uri,0);
+		my_uri[my_uri_len] = '\0';
+		
+		strcpy(curr_connection->resp,"OK\r\n");
+	} 
+
+	FD_SET(sock,&master_wfds); 
+
+			
+	return SUCCESS;
+	
+}
+
+
+void init_connections(connection *connections[]){
+	int i;
+	for(i = 0; i< MAX_CONNECTIONS; i++){
+		connections[i] = NULL;
+	}
+}
+
+
 
 int main(int argc, char* argv[]){
 
+
+	if(check_input(argc,argv) == FAIL){
+		usage();
+		return 0;
+	}
+
 	FILE *conf_fd;
 	FILE * files_fd;
-
 	node nodes[MAX_NODES];
 	node * my_node;
 	//int node_count = 0;
 	int flask_sock;
 	//int ospf_sock;
 	int i;
-	
 	int fd_high;
 	int run = 1;
 	int ret;
-	char * cmd;
-	char * name;
-	char my_uri[MAX_URI_LEN];
-	char *tmp;
-	char tmp_str[MAX_BUF_LEN];
-	int my_uri_len;	
-	char buf[MAX_BUF_LEN];
+	int num_connections = 0;	
 	//int rt[150][3];	
 	int node_count = 0;
-
-    char hostname[MAX_URI_LEN];
-
-    gethostname(hostname, MAX_URI_LEN);
+    	char hostname[MAX_URI_LEN];
+	connection *connections[MAX_CONNECTIONS];
 	
-	/*	
-	int updater_id;
-	char *updater_neighs;
+	init_connections(connections);
+	gethostname(hostname, MAX_URI_LEN);
 	
-	int ack_timeout[MAX_NODES][2];
-	for (i = 0; i<MAX_NODES; i++){
-		ack_timeout[i][0]= NOT_YET;
-		ack_timeout[i][1]=-1;
-	}
-	*/
 
-	fd_set read_fd_list;
-	fd_set master_fd_list;
-	fd_set write_fd_list;
-	path * host_path_s;
+	fd_set curr_rfds;
+	fd_set curr_wfds;
 	liso_hash *ht = (liso_hash *)malloc(sizeof(liso_hash));	
-	
-	if(check_input(argc,argv) == FAIL){
-		usage();
-		return 0;
-	}
-
 	
 	
 	conf_fd = fopen(argv[1],"r");
-	
 	init_nodes(nodes,conf_fd,&node_count);
-
 	fclose(conf_fd);
 
 	
 	files_fd = fopen(argv[2],"r");
-
 	my_node = &nodes[0];
+	
+	sprintf(my_uri,"http://%s:%d", hostname, my_node->server_p);
 	hash_add_my_objs(ht,files_fd,my_node->server_p);
-
 	fclose(files_fd);
+
+
 		
 	/*
 	for(i=0;i<MAX_NODES;i++){
@@ -346,133 +420,58 @@ int main(int argc, char* argv[]){
 		fd_high = ospf_sock+1;
 	}else{
 	*/
-		fd_high = flask_sock;
+	fd_high = flask_sock;
 	//}
 
-	sprintf(my_uri,"http://%s:%d", hostname, my_node->server_p);
-	my_uri_len = strlen(my_uri);
+		FD_ZERO(&curr_wfds);
+	FD_ZERO(&master_wfds);
+	FD_ZERO(&curr_rfds);
+	FD_ZERO(&master_rfds);
 
-	FD_ZERO(&write_fd_list);
-	FD_ZERO(&master_fd_list);
-	FD_ZERO(&read_fd_list);
-	FD_SET(flask_sock,&master_fd_list); 	//add sock to master file descriptor list
-	//FD_SET(ospf_sock,&master_fd_list); 	//add sock to master file descriptor list
+	FD_SET(flask_sock,&master_rfds); 	//add sock to master file descriptor list
+	//FD_SET(ospf_sock,&master_rfds); 	//add sock to master file descriptor list
 
 	printf("wating for flask connection\n");
 
 	while (run){
-		/*
-		if(update_neighbors() == 1){
-			str = build_ospf_str();
-			
-			neighbor=strtok(my_neighs,"*");
+		curr_wfds = master_wfds;
+		curr_rfds = master_rfds;
+		ret = select(fd_high+1,&curr_rfds, &curr_wfds,NULL,NULL);
 
-			while(neighbor != NULL){
-				out_sock = create_socket(UDP,atoi(neighbor));
-				if(out_sock > fd_high){
-					fd_high = out_sock;
-				}
-				FD_SET(out_sock,&write_fd_list);
-				ack_timeout[atoi(neighbor)][0] = YES;
-				ack_timeout[atoi(neighbor)][1] = out_sock;
-				
-				neighbor = strtok(NULL,"*");
-
-			}
-
-
-		}
-
-		*/
-
-		read_fd_list = master_fd_list;
-		if (select(fd_high+1, &read_fd_list, &write_fd_list, NULL, NULL) == -1){
+		if (ret  <0){
 			close(flask_sock);
 			return FAIL;
-		}
-		
-		for(i=0;i<=fd_high;i++){
-			if(FD_ISSET(i,&read_fd_list)){		
-				if(i == flask_sock /* ||i == ospf_sock */){ //new connection
-					printf("trying to connect\n");
-                    			new_connection(i,&fd_high, &master_fd_list);
-			
-				}else{
-					ret = recv(i, buf, MAX_BUF_LEN, 0);
-					if( ret > 0){
-						
-						
-						cmd = strtok(buf," ");
-					
-						if(strcmp(cmd,"RDGET") == 0){
-
-							name = strtok(NULL," ");
-							host_path_s = get_paths(ht,name);
-							
-							if(host_path_s == NULL){
-								send(i,"404 NF",7, 0);
-							}else{
-						
-								sprintf(tmp_str,"200 %s",host_path_s->uri);
-								send(i,tmp_str,strlen(tmp_str), 0);
-								printf("sending:\n\t %s\n",tmp_str);
-							}	
-						}else if(strcmp(cmd,"ADDFILE")==0){ // add file to local node
-							name = strtok(NULL," ");
-							tmp = strtok(NULL," ");
-						
-							printf("cmd:%s\npath:%s\n",cmd,name);
-							files_fd = fopen(argv[2],"a");
-							fprintf(files_fd,"%s %s\n",name,tmp);
-							fclose(files_fd);
-
-							strcat(my_uri,tmp);							
-							hash_add(ht,name,my_uri,0);
-							my_uri[my_uri_len] = '\0';
-							send(i,"200",3, 0);
-							printf("sent OK ADD\n");
-						}/* 
-						else{ // OSPF message
-							updater_id= atoi(cmd);
-							updater_host = strtoke(NULL," ");							
-							if(strcmp(updater_host,"ACK") != 0){ //new ospf Update
-
-								updater_neighs = strtok(NULL," ");
-								updater_objects = strtoke(NULL," ");
-								ospf_update_in(rt,updater_id,updater_host_updater_neighs,updater_objects);
-							}else{ //ospf ack from neighbor
-								FD_CLR(i,&write_fd_list);	
-
-								for(j = 0; j< MAX_NODES;j++){
-									if(ack_timeout[j][0]==i){
-										break;
-									}
-								}	
-								ack_timeout[j][0]= NOT_YET;
-								ack_timeout[j][1] = -1;												
-
-							}
-
+		}else if(ret == 0){
+			continue;
+		}else{
+			for(i=0;i<=fd_high;i++){
+				if(FD_ISSET(i,&curr_rfds)){	
+					if(i == flask_sock && num_connections < MAX_CONNECTIONS ){ //new 
+        					new_connection(connections,i,&fd_high);
+						if(ret == SUCCESS){
+							num_connections++;
 						}
-						*/
-					} else {
-					    close(i);
-					    FD_CLR(i,&master_fd_list);
-                   			 
+					}else{
+						ret = recv_data(ht,connections[i],i,argv[2]);
+						if(ret == CLOSED){
+							num_connections--;
+						}
 					}
-					
-					memset(buf,0,MAX_BUF_LEN);
 				}
-			} 
-			 
-			if(FD_ISSET(i,&write_fd_list)){
+					
+				
+				if(FD_ISSET(i,&curr_wfds)){
+					send(i,	connections[i]->resp,strlen(connections[i]->resp),0);
+					printf("I sent: %s!!!\n",connections[i]->resp);
+					FD_CLR(i,&master_wfds);
+					connections[i]->buf[0]='\0';
+					connections[i]->resp[0]='\0';
+				}
 
-						
-			} 
-			
+			}
 		}
 	}
 
-    return 1;
-	
+return SUCCESS;
+
 }
