@@ -57,18 +57,18 @@ int create_packet(node *node,char *lsa){
 	lsa+=4;
 	node->lsa.seq_num = (int)lsa;
 	lsa+=4;
-	node->lsa.num_neighbors = (int)lsa;
+	node->lsa.link_count = (int)lsa;
 	lsa+=4;
-	node->lsa.num_objs =(int)lsa;
+	node->lsa.obj_count =(int)lsa;
 	lsa+=4;
 	
 
-	for(i=0;i<node->lsa.num_neighbors;i++){
-		node->lsa.neighbors[i]=(int)lsa;	
+	for(i=0;i<node->lsa.link_count;i++){
+		node->lsa.links[i]=(int)lsa;	
 		lsa+=4;
 	}
 
-	for(i=0;i<node->lsa.num_objs;i++){
+	for(i=0;i<node->lsa.obj_count;i++){
 		obj_len =(int)lsa;
 		lsa+=4;
 		strncpy(node->lsa.objs[i],lsa,obj_len);
@@ -164,14 +164,16 @@ int rd_send(node *to_node,char *str){
 
 
 
+
+
 /*
 handler for any incoming lsa advertisements from other routing daemons.
-receives the incoming lsa from a neighbor (forwarder_id) 
+receives the incoming lsa from a links (forwarder_id) 
 decrements TTL.
-forwards lsa to all its other neighbors.
+forwards lsa to all its other links.
 cd 
 */
-int lsa_handler(int rd_sock,int neighbors){
+int lsa_handler(int rd_sock){
 
 
 
@@ -185,8 +187,8 @@ int lsa_handler(int rd_sock,int neighbors){
 		return FAIL;
 	}
 
-	//forward lsa to all other neighbors
-	for (i=1; i<neighbors;i++){ //skip nodes[0] = self.
+	//forward lsa to all other links
+	for (i=1; i<nodes[0].lsa.link_count;i++){ //skip nodes[0] = self.
 		if(nodes[i].id != forwarder_id){	
 			src_node->lsa_buf[0]--; //decremet TTL
 			rd_send(&(nodes[i]),src_node->lsa_buf);
@@ -197,6 +199,41 @@ int lsa_handler(int rd_sock,int neighbors){
 }
 
 
-/*
-Initializes all global variables, and structures.
-*/
+char *create_lsa(char *lsa){
+		
+	char objs_entry[MAX_OBJS*MAX_OBJ_LEN];
+	char *obj;
+	char obj_len[4];
+	int i;
+	char link_id[4];
+	char links_entry[MAX_OBJS];
+	objs_entry[0]='\0';
+	for(i = 0; i<nodes[0].lsa.obj_count;i++){
+		obj = nodes[0].lsa.objs[i];
+		sprintf(obj_len,"%d",strlen(obj));
+		strcat(objs_entry,obj_len);
+		strcat(objs_entry,obj);
+	}		
+
+	links_entry[0]='\0';
+	for(i=0;i<nodes[0].lsa.link_count;i++){
+		sprintf(link_id,"%d",nodes[0].lsa.links[i]);
+		strcat(links_entry,link_id);
+	}
+ 
+	sprintf(lsa,"%c%c%s%d%d%d%d%s%s",
+			nodes[0].lsa.version,
+	 		nodes[0].lsa.ttl, 
+	 		nodes[0].lsa.type,
+	 		nodes[0].id,
+	 		nodes[0].lsa.seq_num,
+	 		nodes[0].lsa.link_count,
+	 		nodes[0].lsa.obj_count,
+	 		links_entry,
+	 		objs_entry);
+
+	nodes[0].lsa.seq_num++;
+
+return lsa;
+}
+

@@ -7,6 +7,7 @@
 #define FAIL -1
 #define CLOSED 0
 
+
 #define MAX_OBJ_LEN 64
 #define MAX_URI_LEN 2048
 #define MAX_HOST_LEN 100
@@ -24,6 +25,13 @@
 #define DOWN 0
 #define MAX_OBJS 15000
 
+#define VERSION '1'
+#define TYPE_LSA "00"
+#define TYPE_LSA_ACK "01" 
+#define DEF_TTL ' ' //aschii char 'space' is decimal 32 
+
+
+
 struct packet {
 
 	char version;
@@ -31,9 +39,9 @@ struct packet {
 	char type[2];
 	int src_id;
 	int seq_num;
-	int num_neighbors;
-	int num_objs;
-	int neighbors[MAX_NODES];
+	int link_count;
+	int obj_count;
+	int links[MAX_NODES];
 	char objs[MAX_OBJS][MAX_OBJ_LEN];	
 };
 
@@ -44,7 +52,7 @@ typedef struct _node{
 	int local_p;
 	int route_p;
 	int server_p;
-	int sequence_num;
+	int seq_num;
 	struct packet lsa;
 	char lsa_buf[MAX_LSA_LEN];	
 	int state;
