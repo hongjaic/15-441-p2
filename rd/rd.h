@@ -13,10 +13,30 @@
 #define MAX_BUF_LEN MAX_OBJ_LEN+MAX_URI_LEN+9
 #define MAX_READ_LEN MAX_HOST_LEN+30
 #define MAX_RESP_LEN MAX_URI_LEN+3
+#define MAX_LSA_LEN 2048
 #define MAX_NODES 150
 #define OSPF_INTERVAL 6000
 #define flask_port 8888
 #define MAX_CONNECTIONS 1000
+#define TCP 1
+#define UDP 0
+#define UP 1
+#define DOWN 0
+#define MAX_OBJS 15000
+
+struct packet {
+
+	char version;
+	char ttl;
+	char type[2];
+	int src_id;
+	int seq_num;
+	int num_neighbors;
+	int num_objs;
+	int neighbors[MAX_NODES];
+	char objs[MAX_OBJS][MAX_OBJ_LEN];	
+};
+
 typedef struct _node{
 
 	int id;
@@ -25,17 +45,23 @@ typedef struct _node{
 	int route_p;
 	int server_p;
 	int sequence_num;
-	
+	struct packet lsa;
+	char lsa_buf[MAX_LSA_LEN];	
+	int state;
 }node;
 
 
-typedef struct _conn{
+typedef struct _connection{
 
 	char buf[MAX_BUF_LEN];
 	char resp[MAX_RESP_LEN];
 
 }connection;
-#endif /*LISOD_H_*/
+
+
+node nodes[MAX_NODES];
+
+#endif /*RD_H_*/
 
 
 
