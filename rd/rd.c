@@ -15,22 +15,24 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <time.h>
+
 #include "rd.h"
-#include "flood.c"
+#include "flooding_engine.h"
+#include "hashset.h"
 
-char g_my_uri[MAX_URI_LEN];
-fd_set g_master_wfds;
-fd_set g_master_rfds;
-int g_flask_sock;
-int g_rd_sock;
-int g_local_obj_count;
-int g_node_count;
-node *g_my_node;
-
+char my_uri[MAX_URI_LEN];
+fd_set master_wfds;
+fd_set master_rfds;
+int flask_sock;
+int rd_sock;
+int local_obj_count;
+int node_count;
+direct_links neighbors;
 connection  connections[MAX_CONNECTIONS];
 liso_hash ht;
-int rt[MAX_NODES][2];
-
+routing_table rt;
+local_objects my_files;
 
 int check_input(int argc, char *argv[]){
 
@@ -60,11 +62,11 @@ int hash_add_my_objs(FILE *files_fd, int port){
 	int j= 0;
 	char car = '0';
   	char name[MAX_OBJ_LEN];
-	int g_my_uri_len = strlen(g_my_uri);
-	j = g_my_uri_len;
+	int my_uri_len = strlen(my_uri);
+	j = my_uri_len;
 	int quit = 0;
 
-	printf("default URI: %s\n", g_my_uri);	
+	printf("default URI: %s\n", my_uri);	
 	while(1){
 		while (car != ' '){
 			if((car = fgetc(files_fd)) == EOF){
@@ -81,7 +83,7 @@ int hash_add_my_objs(FILE *files_fd, int port){
 
 		while (car != '\r' && car!='\n'){
 			if((car = fgetc(files_fd)) != EOF){
-				g_my_uri[j++] = car;		
+				my_uri[j++] = car;		
 			}else{
 				quit = 1;
 				break;
@@ -89,16 +91,18 @@ int hash_add_my_objs(FILE *files_fd, int port){
 			//printf("!%c!\n",uri[j-1]);		
 		}
 		
-		g_my_uri[j-1] = '\0';
-		printf("local object: %s at path:%s\n\n",name,g_my_uri);
-		hash_add(&ht,name,g_my_uri,0);		
+		my_uri[j-1] = '\0';
+		printf("local object: %s at path:%s\n\n",name,my_uri);
+		hash_add(&ht,name,neighbors.links[0].id,0);
+		strcpy(my_files.objects[count].name , name);
+		strcpy(my_files.objects[count].path , my_uri);		
 		i = 0;
-		j = g_my_uri_len;
+		j = my_uri_len;
 		count++;
 		
 		if (quit){
+			my_files.num_objects = count;
 			return count;
-		
 		}
 	}
 }
@@ -108,43 +112,43 @@ int hash_add_my_objs(FILE *files_fd, int port){
 initializes the nodes array, which keeps track of all the nodes in the system
 and their information. this initializes the nodes array to include the local node
 as nodes[0], as well as all of its direct link nodes as 
-nodes[1] ... nodes[j] (assuming local node has j links) 
+nodes[1] ... nodes[j] (assuming local node has j direct_links) 
 nodes[j+1] ... nodes[MAX_NODES] are initialized to NULL
 */
 
-void init_nodes( FILE *conf_fd){
+int init_neighbors(FILE *conf_fd){
 
 	char buf[MAX_READ_LEN];
 	char *ptr;
 	int tmp;
-	while(g_node_count < MAX_NODES && fgets(buf,MAX_READ_LEN,conf_fd) != NULL){
+	int num_neighbors = 0;
+	while(num_neighbors < MAX_NODES && fgets(buf,MAX_READ_LEN,conf_fd) != NULL){
 
 		ptr = strtok(buf," ");
-		nodes[g_node_count].id=atoi(ptr);
+		neighbors.links[num_neighbors].id=atoi(ptr);
 		
 		ptr = strtok(NULL," ");
-		strcpy(nodes[g_node_count].host,ptr);
+		strcpy(neighbors.links[num_neighbors].host,ptr);
 
 		ptr = strtok(NULL," ");
-		nodes[g_node_count].route_p= atoi(ptr);
+		neighbors.links[num_neighbors].route_p= atoi(ptr);
 
 		ptr = strtok(NULL," ");
-		nodes[g_node_count].local_p= atoi(ptr);
+		neighbors.links[num_neighbors].local_p= atoi(ptr);
 
 		ptr = strtok(NULL," ");
-		nodes[g_node_count].server_p = atoi(ptr);
-
-		nodes[g_node_count].state = UP;
+		neighbors.links[num_neighbors].server_p = atoi(ptr);
 		
-		g_node_count++;
+		num_neighbors++;
 		
 	}
-	tmp = g_node_count;
+	tmp = num_neighbors;
 	while(tmp < MAX_NODES){
-		nodes[tmp].id = -1;
+		neighbors.links[tmp].id = -1;
 		tmp++;
 	}
-
+	neighbors.num_links = num_neighbors;
+	return num_neighbors;
 }
 
 
@@ -191,7 +195,7 @@ void socket_setup(int *sock, int port,int type){
 new connection handler is called whenever there is a flask request on the server TCP socket.
 accepts the connection.
 initializes the buf and resp variables for this newly created connections structure entry.
-adds the port to the g_master_rfds so that our select loop can poll it.
+adds the port to the master_rfds so that our select loop can poll it.
 */
 
 int new_client_handler(int sock,int *fd_high ){
@@ -205,13 +209,12 @@ int new_client_handler(int sock,int *fd_high ){
 		return FAIL;	
 	}
 
-	connections[redir].buf[0]='\0';
 	connections[redir].resp[0]='\0';
 	
 	if (redir > *fd_high){    // keep track of the max
 		*fd_high = redir;
 	}
-	FD_SET(redir, &g_master_rfds);
+	FD_SET(redir, &master_rfds);
 	
 	return SUCCESS;
 }
@@ -233,7 +236,7 @@ if request is an ADDFILE,
 	create response with OK
 
 add the response to the connection's response buffer.
-add the connections socket to the g_master_wfds so that the select loop can do its thing on it
+add the connections socket to the master_wfds so that the select loop can do its thing on it
 
 */
 
@@ -245,29 +248,25 @@ int flask_request_handler(connection *curr_connection,int sock,char *objs_file){
 	char tmp_str[MAX_BUF_LEN];
 	FILE * files_fd;
 
-	int g_my_uri_len;
+	int my_uri_len;
 	
 	path * host_path_s;
 	int ret;
 	char buf[MAX_BUF_LEN];
 	memset(buf,0,MAX_BUF_LEN);
-	g_my_uri_len = strlen(g_my_uri);
+	my_uri_len = strlen(my_uri);
 
 
 	if((ret = recv(sock, buf, MAX_BUF_LEN, 0)) < 0){
 		return FAIL;
 	}else if(ret == 0){
 		close(sock);
-		FD_CLR(sock,&g_master_rfds);
-		FD_CLR(sock,&g_master_wfds);
+		FD_CLR(sock,&master_rfds);
+		FD_CLR(sock,&master_wfds);
 		return CLOSED  ;   
 	}
 
 
-	strcat(curr_connection->buf,buf);
- 	if(strstr(curr_connection->buf,"\r\n") == NULL){
-		return SUCCESS;
-	}
 
 	cmd = strtok(buf," ");
 	name = strtok(NULL," ");
@@ -291,14 +290,14 @@ int flask_request_handler(connection *curr_connection,int sock,char *objs_file){
 		fprintf(files_fd,"%s %s\n",name,tmp_uri);
 		fclose(files_fd);
 		
-		strcat(g_my_uri,tmp_uri);							
-		hash_add(&ht,name,g_my_uri,0);
-		g_my_uri[g_my_uri_len] = '\0';
-		g_local_obj_count++;
+		strcat(my_uri,tmp_uri);							
+		hash_add(&ht,name,neighbors.links[0].id,0);
+		my_uri[my_uri_len] = '\0';
+		local_obj_count++;
 		strcpy(curr_connection->resp,"OK\r\n");
 	} 
 
-	FD_SET(sock,&g_master_wfds); 
+	FD_SET(sock,&master_wfds); 
 
 			
 	return SUCCESS;
@@ -310,57 +309,88 @@ int init_all(fd_set* curr_rfds,fd_set* curr_wfds,int* fd_high,char* conf_file,ch
 
 	//int i;
 	FILE *conf_fd, *objs_fd;
-    	char hostname[MAX_URI_LEN];
-
+    char hostname[MAX_URI_LEN];
+	link_entry my_node = neighbors.links[0];
 	gethostname(hostname, MAX_URI_LEN);
 	
 	conf_fd = fopen(conf_file,"r");
 	
 	//init localnode as well as all link nodes
-	init_nodes(conf_fd); 
-	g_my_node = &(nodes[0]);
-
-	nodes[0].lsa.link_count = g_node_count - 1;
+	init_neighbors(conf_fd); 
 	fclose(conf_fd);
 
 	objs_fd = fopen(objs_file,"r");
 	
-	sprintf(g_my_uri,"http://%s:%d", hostname, g_my_node->server_p);
+	sprintf(my_uri,"http://%s:%d", hostname, my_node.server_p);
 
 	 //add all local {object,path} pairs to system hashtable
-	g_local_obj_count = hash_add_my_objs(objs_fd,g_my_node->server_p);
+	local_obj_count = hash_add_my_objs(objs_fd,my_node.server_p);
 	fclose(objs_fd);
 
-	/*
-	for(i=0;i<MAX_NODES;i++){
-		rt[i][1]=-1; //next hop to i 
-		rt[i][2]=-1; //cost to i
-	}	
-	rt[nodes[0]->id][0]=nodes[0]->id;
-	rt[nodes[0]->id][1] = 0;
-	*/
-
+	
 	 //set up flask request TCP listener socket
-	socket_setup(&g_flask_sock,g_my_node->local_p,TCP);
+	socket_setup(&flask_sock,my_node.local_p,TCP);
 
 	//set up routing daemon UDP listener socket
-	socket_setup(&g_rd_sock,g_my_node->route_p,UDP);
-	if(g_rd_sock > g_flask_sock){
-		*fd_high = g_rd_sock;
+	socket_setup(&rd_sock,my_node.route_p,UDP);
+	if(rd_sock > flask_sock){
+		*fd_high = rd_sock;
 	}else{
-		*fd_high = g_flask_sock;
+		*fd_high = flask_sock;
 	}
 
         // zero out all fd_sets
 	FD_ZERO(curr_wfds);
-	FD_ZERO(&g_master_wfds);
+	FD_ZERO(&master_wfds);
 	FD_ZERO(curr_rfds);
-	FD_ZERO(&g_master_rfds);
+	FD_ZERO(&master_rfds);
        
 	// add both TCP and UDP listener sockets to the master read fd sets.
-	FD_SET(g_flask_sock,&g_master_rfds);
-	FD_SET(g_rd_sock,&g_master_rfds); 	
+	FD_SET(flask_sock,&master_rfds);
+	FD_SET(rd_sock,&master_rfds); 	
+	return SUCCESS;
+}
 
+
+/*
+handler for any incoming lsa advertisements from other routing daemons.
+receives the incoming lsa from a neighbor (forwarder_id) 
+decrements TTL.
+forwards lsa to all its other neighbors.
+cd 
+*/
+int lsa_handler(direct_links *neighbors, routing_table *rt ,int rd_sock)
+{
+	int i = 1;
+	int forwarder_id;
+	LSA *lsa;
+	short type;
+	lsa = rt_recvfrom(rt,rd_sock,&forwarder_id);
+	type = GET_TYPE(lsa->version_ttl_type);
+	if(type == 0x00){
+		//forward lsa to all other neighbors
+		for(i=1; i<neighbors->num_links-1;i++)
+	    { //skip links[0] = self.
+			if(neighbors->links[i].id != forwarder_id){	
+				//decremet TTL
+				rt_send(neighbors->links[i++],lsa);
+			}
+		}
+	}else if (type == 0x01){
+		while(neighbors->links[i].id!=forwarder_id){
+			i++;
+		}
+		
+		
+	
+	}else{
+	
+	
+	
+	}
+	
+	
+		printf("received lsa from %d\n",lsa->sender_node_id);
 	return SUCCESS;
 }
 
@@ -375,14 +405,14 @@ Decides wether data should be handled as a
 
 */
 
-void recv_handler( int read_sock, int *fd_high, int *connection_count,char *objs_file){
+void recv_handler(routing_table *rt,direct_links *neighbors,int read_sock, int *fd_high, int *connection_count,char *objs_file){
 
-	if(read_sock == g_rd_sock){ // incoming LSA or LSA-ACK
-		lsa_handler(g_rd_sock);
-	}else if(read_sock == g_flask_sock && *connection_count < MAX_CONNECTIONS ){ //new flask client
+	if(read_sock == rd_sock){ // incoming LSA or LSA-ACK
+		lsa_handler(neighbors,rt,rd_sock);
+	}else if(read_sock == flask_sock && *connection_count < MAX_CONNECTIONS ){ //new flask client
         	if (new_client_handler(read_sock,fd_high) == SUCCESS){
-			(*connection_count)++;
-		}
+				(*connection_count)++;
+			}
 	}else{  // new request from flask client
 		if(flask_request_handler(&(connections[read_sock]),read_sock,objs_file)== CLOSED){
 			(*connection_count)--;
@@ -407,66 +437,17 @@ void flask_response_handler(int write_sock, connection *flask_connection){
 	printf("I sent: %s!!!\n",flask_connection->resp);
 
 	//remove i from the write fd_set
-	FD_CLR(write_sock,&g_master_wfds);
+	FD_CLR(write_sock,&master_wfds);
 	
 	//reset this connections in and out bufs
-	flask_connection->buf[0]='\0'; 
 	flask_connection->resp[0]='\0';
 
 
 }
 
+void node_dead(direct_links neighbor,int index){
 
-/*
-char *build_rd_str(){
-
-	char *str;
-	char *my_id;
-	char my_host[MAX_HOST_LEN];
-	char *my_objs;
-	char *my_neighs;
-	char *neighbor;
-	int sock;
-	sprintf(str,"%d %s %s %s",my_id,my_host,my_objs,my_neighs);
-	
-	return str;
 }
-*/
-
-/*
-void rd_update_in(int updater_id,char *updater_host, char *updater_neighs,char *updater_objects){
-	char *objects;
-	char *obj;
-	char * neighbor;
-	int cost;
-	neighbor=strtok(updater_neighs,"*");
-
-	while(neighbor != NULL){
-		update_rt(rt,updater_id,atoi(neighbor));
-		neighbor = strtok(NULL,"*");
-	}
-	
-	obj=strtok(updater_objects," ");
-	while(obj != NULL){
-		if(is_new_obj(ht,updater_id,obj) == 1){
-			hash_add(&ht,obj,updater_host,rt[updater_id][2]);
-		}		
-		obj = strok(NULL," ");
-	}			
-}
-*/
-
-/*
-void update_rt( int updater_id, int neighbor_id){
-	int curr_cost = rt[neighbor_id][2]; //current cost to get to neighbor_id
-	int updater_cost = rt[updater_id][2]; // current cost to get to updater_id
-	int new_cost = updater_cost+1; // cost to get to neighbor_id via updater_id
-	if(new_cost < curr_cost){
-		rt[neighbor_id][1]=updater_id;
-		rt[neighbor_id][2]=new_cost;	
-	}
-}
-*/
 
 
 int main(int argc, char* argv[]){
@@ -481,38 +462,68 @@ int main(int argc, char* argv[]){
 	int fd_high;
 	int ret;
 	int connection_count = 0;
-
+	time_t last_flood,curr_time;
+	int curr_check,last_check;
 	fd_set curr_rfds, curr_wfds;
+	int all_acks_received = 0;
 	if(init_all(&curr_rfds,&curr_wfds,&fd_high,argv[1],argv[2]) == FAIL){
 		return FAIL;
 	}
 
-	printf("wating for flask connection\n");
+	curr_time = time(NULL);
+	ret = curr_time % 60;
 
+	if(ret > 5){
+		sleep(60 - ret);
+	}
+	printf("wating for flask connection\n");
+	curr_time = time(NULL);
+	last_flood = curr_time - 30;
 	while (1){
-		curr_wfds = g_master_wfds;
-		curr_rfds = g_master_rfds;
-		ret = select(fd_high+1,&curr_rfds, &curr_wfds,NULL,NULL); 
+	
+		
+		if (curr_time - last_flood >= 30){
+			flood_lsa(neighbors);
+			last_flood = curr_time;
+			
+		}
+		curr_check = time(NULL);
+		if(!all_acks_received && (curr_check - last_check > 3)){
+			for( i=1; i<neighbors.num_links-1;i++){
+				if(neighbors.links[i].ack_received == NO){
+					if(neighbors.links[i].retransmits == 2){
+						node_dead(neighbors,i);
+					}else{
+						retransmit_lsa(neighbors.links[i]);
+						neighbors.links[i].retransmits++;
+					}
+			
+				}
+			}
+			last_check = curr_check;
+
+		}
+		
+		curr_wfds = master_wfds;
+		curr_rfds = master_rfds;
+		ret = select(fd_high+1,&curr_rfds, &curr_wfds,NULL,0); 
 
 		if (ret == -1){ //error selecting... close? skip? idk
-	  		close(g_flask_sock);
-			close(g_rd_sock);
+	  		close(flask_sock);
+			close(rd_sock);
 			exit(0);	
 			//continue;
 		}	
 
 		for(i=0;i<=fd_high;i++){
 			if(FD_ISSET(i,&curr_rfds)){	
-				recv_handler(i,&fd_high, &connection_count,argv[2]);
+				recv_handler(&rt,&neighbors,i,&fd_high, &connection_count,argv[2]);
 			}
-			if(FD_ISSET(i,&curr_wfds)){ 
-				if ( i == g_rd_sock ){
-					//rd_response_handler();		
-				}else{
-					flask_response_handler(i,&(connections[i]));
-				}
+			if(FD_ISSET(i,&curr_wfds)){
+				flask_response_handler(i,&(connections[i]));
 			}
 		}
+		curr_time = time(NULL);
 	}
 
 	return SUCCESS;

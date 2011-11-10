@@ -56,7 +56,7 @@ liso_hash headers_hash;
 void init_hash(liso_hash *h);
 int contains_object(liso_hash *h, char *obj_name);
 path *get_paths(liso_hash *h, char *obj_name);
-int hash_add(liso_hash *h, char *obj_name, char *uri, int cost);
+int hash_add(liso_hash *h, char *obj_name, int id, int cost);
 int hash_remove(liso_hash *h, char *obj_name);
 int collapse(liso_hash *h);
 void printPairs(liso_hash *h);

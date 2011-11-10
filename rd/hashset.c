@@ -69,7 +69,7 @@ path *get_paths(liso_hash *h, char *obj_name)
     return NULL;
 }
 
-int hash_add(liso_hash *h, char *obj_name, char *uri, int cost)
+int hash_add(liso_hash *h, char *obj_name, int id, int cost)
 {
     int hash_index = -1;
     pair *dom = NULL;
@@ -83,7 +83,7 @@ int hash_add(liso_hash *h, char *obj_name, char *uri, int cost)
 
 
     path *newpath = malloc(sizeof(path));
-    strcpy(newpath->uri, uri);
+    //strcpy(newpath->uri, uri);
     newpath->cost = cost;
     newpath->next_path_s = NULL;
 

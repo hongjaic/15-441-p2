@@ -8,6 +8,9 @@
 #ifndef FLOODING_ENGINE_H
 #define FLOODING_ENGINE_H
 
+
+#define SUCCESS 1
+#define FAIL -1
 #define GET_VERSION(version_ttl_type)   ((version_ttl_type>>24)&0xFF)
 #define GET_TTL(version_ttl_type)       ((version_ttl_type>>16)&0xFF)
 #define GET_TYPE(version_ttl_type)      (version_ttl_type&0xFFFF)
@@ -26,7 +29,11 @@
 #define DEFAULT_TTL             0x20
 
 #define MAX_NODES               150
+#define ACK_TIMEOUT				2
 
+#define MAX_HOST_LEN 100
+#define MAX_READ_LEN MAX_HOST_LEN+30
+#define MAX_BUF                 1000
 typedef struct LSA
 {
     int version_ttl_type;
@@ -37,6 +44,23 @@ typedef struct LSA
     char links_objects[];
 } LSA;
 
+
+typedef struct _link_entry{
+	int id;
+	char host[MAX_HOST_LEN];
+	int local_p;
+	int route_p;
+	int server_p;
+	int retransmits;
+	int ack_received;
+	
+}link_entry;
+
+typedef struct _direct_links{
+	int num_links;
+	link_entry links[MAX_NODES];
+}direct_links;
+
 typedef struct routing_entry
 {
     int id;
@@ -45,16 +69,20 @@ typedef struct routing_entry
     int cost;
 } routing_entry;
 
+
 typedef struct routing_table
 {
-    routing_entry table[MAX_NODE_NUM];
+    routing_entry table[MAX_NODES];
 } routing_table;
 
 
 void update_table(routing_table *rt, LSA *lsa, int nexthop);
-void update_entry(routing_table *rt, routing_entry *entry);
-void lookup_entry(routing_table *rt, struct in_addr in);
-int bytes_to_packet(LSA *lsa, char *buf, int size);
-
+//void update_entry(routing_table *rt, routing_entry *entry);
+//void lookup_entry(routing_table *rt, struct in_addr in);
+void bytes_to_packet(LSA *lsa, char *buf, int size);
+LSA *rt_recvfrom(routing_table *rt,int sock, int *forwarder_id );
+int rt_send(link_entry link,LSA *lsa);
+void flood_lsa(direct_links neighbors);
+void retransmit_lsa(link_entry link);
 
 #endif

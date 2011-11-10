@@ -15,7 +15,7 @@ default: rd
 #	@gcc test.c hashset.c -o testfile -Wall -Werror
 
 rd: rd.c
-	@gcc rd.c hashset.c -o rd -g -Wall -Werror
+	@gcc rd.c hashset.c flooding_engine.c -o rd -g -Wall -Werror
 
 clean:
 	@rm rd
