@@ -12,7 +12,7 @@ void free_path_link(path *ptr);
 int pathcmp(path *ptr1, path *ptr2);
 void remove_obj_from_objset(liso_hash *h, char *obj_name);
 int link_contains_paths(pair *ptr, path *paths);
-int link_contains_obj(pair *ptr, char *obj_name);
+pair *link_contains_obj(pair *ptr, char *obj_name);
 uint32_t super_fast_hash(const char *data, int len);
 void string_tolower(char *str);
 
@@ -28,18 +28,18 @@ void init_hash(liso_hash *h)
     h->num_objs = 0;
 }
 
-int contains_object(liso_hash *h, char *obj_name)
+pair *contains_object(liso_hash *h, char *obj_name)
 {
     int hash_index;
     pair *ptr;
 
     if (h->num_objs == 0)
-        return 0;
+        return NULL;
 
     hash_index = super_fast_hash(obj_name, (int)strlen(obj_name))%HASHSIZE;
 
     if ((ptr = (h->hash)[hash_index]) == NULL)
-        return 0;
+        return NULL;
 
     return link_contains_obj(ptr, obj_name);
 }
@@ -69,21 +69,43 @@ path *get_paths(liso_hash *h, char *obj_name)
     return NULL;
 }
 
-int hash_add(liso_hash *h, char *obj_name, int id, int cost)
+int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
 {
     int hash_index = -1;
     pair *dom = NULL;
-
-    if (contains_object(h, obj_name))
-    {
-        return 0;
-    }
+    path *curr_nearest = NULL
 
     hash_index = super_fast_hash(obj_name, (int)strlen(obj_name))%HASHSIZE;
 
+    if ((dom = contains_object(h, obj_name)) != NULL)
+    {
+        path *newpath = malloc(sizeof(path));
+        newpath->node_id = node_id;
+        newpath->cost = cost;
+        newpath->next_path_s = NULL;
+
+        curr_nearest = dom->path;
+        
+        if (curr_nearest == NULL)
+        {
+            dom->path = newpath;
+        }
+        else if (curr_nearest->cost > cost)
+        {
+            newpath->next_path_s = curr_nearest;
+            dom->path = newpath;
+        }
+        else
+        {
+            newpath->next_path_s = curr_nearest->next_path_s;
+            curr_nearest->next_path_s = newpath;
+        }
+
+        return 1;
+    }
 
     path *newpath = malloc(sizeof(path));
-    //strcpy(newpath->uri, uri);
+    newpath->node_id = node_id;
     newpath->cost = cost;
     newpath->next_path_s = NULL;
 
@@ -95,7 +117,6 @@ int hash_add(liso_hash *h, char *obj_name, int id, int cost)
 
     if ((dom = (h->hash)[hash_index]) == NULL)
     {
-
         (h->hash)[hash_index] = new;
     } 
     else 
@@ -194,7 +215,7 @@ void printPairs(liso_hash *h)
 
         while (ptr != NULL)
         {
-            printf("uri: %s, cost: %d\n", ptr->uri, ptr->cost);
+            printf("node_id: %s, cost: %d\n", ptr->node_id, ptr->cost);
             ptr = ptr->next_path_s;
         }
     }
@@ -252,7 +273,7 @@ int pathcmp(path *ptr1, path *ptr2)
 
     while (curr1 != NULL && curr2 != NULL)
     {
-        if (strcmp(curr1->uri, curr2->uri) != 0)
+        if (curr1->node_id != curr2->node_id)
         {
             return 1;
         }
@@ -279,7 +300,7 @@ int pathcmp(path *ptr1, path *ptr2)
     return 0;
 }
 
-int link_contains_obj(pair *ptr, char *obj_name)
+pair *link_contains_obj(pair *ptr, char *obj_name)
 {
     pair *curr = ptr;
 
@@ -287,12 +308,12 @@ int link_contains_obj(pair *ptr, char *obj_name)
     {
         if (strcmp(obj_name, curr->obj_name) == 0)
         {
-            return 1;
+            return curr;
         }
         curr = curr->next_pair_s;
     }
 
-    return 0;
+    return NULL;
 }
 
 void remove_obj_from_objset(liso_hash *h, char *obj_name)
