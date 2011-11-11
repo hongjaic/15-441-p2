@@ -8,7 +8,8 @@
 
 #define MAX_OBJ_LEN 64
 #define MAX_URI_LEN 2048
-
+#define MAX_HOST_LEN 100
+#define MAX_READ_LEN 666
 #define MAX_BUF_LEN MAX_OBJ_LEN+MAX_URI_LEN+9
 
 #define MAX_RESP_LEN MAX_URI_LEN+3
@@ -25,14 +26,6 @@
 #define MAX_OBJS 15000
 
 
-/*
-typedef struct _node{
-
-	int id;
-	int seq_num;
-	int state;
-}node;
-*/
 
 
 typedef struct _object_entry{
@@ -49,6 +42,7 @@ typedef struct _local_objects{
 
 typedef struct _connection{
 
+	char *buf[MAX_BUF_LEN];
 	char resp[MAX_RESP_LEN];
 
 }connection;

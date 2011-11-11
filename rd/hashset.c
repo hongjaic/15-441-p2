@@ -73,7 +73,7 @@ int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
 {
     int hash_index = -1;
     pair *dom = NULL;
-    path *curr_nearest = NULL
+    path *curr_nearest = NULL;
 
     hash_index = super_fast_hash(obj_name, (int)strlen(obj_name))%HASHSIZE;
 
@@ -84,16 +84,16 @@ int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
         newpath->cost = cost;
         newpath->next_path_s = NULL;
 
-        curr_nearest = dom->path;
+        curr_nearest = dom->path_s;
         
         if (curr_nearest == NULL)
         {
-            dom->path = newpath;
+            dom->path_s = newpath;
         }
         else if (curr_nearest->cost > cost)
         {
             newpath->next_path_s = curr_nearest;
-            dom->path = newpath;
+            dom->path_s = newpath;
         }
         else
         {
@@ -215,7 +215,7 @@ void printPairs(liso_hash *h)
 
         while (ptr != NULL)
         {
-            printf("node_id: %s, cost: %d\n", ptr->node_id, ptr->cost);
+            printf("node_id: %d, cost: %d\n", ptr->node_id, ptr->cost);
             ptr = ptr->next_path_s;
         }
     }

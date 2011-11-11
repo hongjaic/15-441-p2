@@ -7,6 +7,7 @@
 
 #ifndef FLOODING_ENGINE_H
 #define FLOODING_ENGINE_H
+#include "rd.h"
 
 #define GET_VERSION(version_ttl_type)   ((version_ttl_type>>24)&0xFF)
 #define GET_TTL(version_ttl_type)       ((version_ttl_type>>16)&0xFF)
@@ -33,8 +34,12 @@
 
 #define LSA_TIMEOUT             3
 
+#define FAIL -1
+#define SUCCESS 1
 
-extern engine_wrapper engine;
+
+
+//extern engine_wrapper engine;
 
 #pragma pack(1)
 typedef struct LSA
@@ -54,32 +59,20 @@ typedef struct routing_entry
     int nexthop;
     int cost;
     int node_status;
+    int sequence_num;
 } routing_entry;
 
 typedef struct routing_table
 {
-    routing_entry table[MAX_NODES];
+    routing_entry entry[MAX_NODES];
     int num_entry;
 } routing_table;
 
-typedef struct neighbor
-{
-    char host[MAX_BUF];
-    int routing_port;
-    int local_port;
-    int server_port;
-    int lsa_sent;
-    int lsa_timeout;
-} neighbor;
 
-typedef struct direct_neighbors
+typedef struct _link_entry
 {
-    neighbor neighbors[MAX_NODES]; 
-} direct_neighbors;
-
-typedef struct _link_entry{
 	int id;
-	char host[MAX_HOST_LEN];
+	char host[MAX_BUF];
 	int local_p;
 	int route_p;
 	int server_p;
@@ -88,19 +81,26 @@ typedef struct _link_entry{
 	
 }link_entry;
 
-typedef struct _direct_links{
-	int num_links;
-	link_entry links[MAX_NODES];
+typedef struct _direct_links
+{
+	int num_link;
+	link_entry link[MAX_NODES];
 }direct_links;
+
+
+
 
 int flooding_engine_create(int port);
 void update_table(routing_table *rt, LSA *lsa, int nexthop);
-void update_entry(routing_table *rt, routing_entry *entry);
-void lookup_entry(routing_table *rt, struct in_addr in);
-int bytes_to_packet(LSA *lsa, char *buf, int size);
+void update_entry(routing_table *rt, LSA *lsa, int nexthop);
+routing_entry *lookup_entry(routing_table *rt, struct in_addr in);
+void bytes_to_packet(LSA *lsa, char *buf, int size);
 char *get_neighbor_address(int node_id);
 routing_entry *get_routing_entry(routing_table *rt, int node_id);
-void flood_lsa(direct_links neighbors);
-
-
+int lsa_handler(direct_links *neighbors, routing_table *rt ,int rd_sock);
+LSA *rt_recvfrom(int sockfd, int *forwarder_id, routing_table *rt);
+int rt_send(int sockfd, LSA *lsa, int node_id, int port, int size,direct_links *neighbors);
+void flood_lsa(direct_links *neighbors, LSA *lsa, int sock);
+void create_packet(LSA *lsa, int type, int sequence_num, direct_links *dl, local_objects *ol);
+char * get_link_address(int id,direct_links *neighbors);
 #endif
