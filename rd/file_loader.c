@@ -75,7 +75,7 @@ int load_node_file(char *path, local_objects *ol, liso_hash *gol, int my_node_id
     FILE *fp;
     char line[MAX_LINE];
     char *tokens[2];
-    int i, j = 0;
+    int  j = 0;
 
     if (path == NULL)
     {
@@ -91,14 +91,10 @@ int load_node_file(char *path, local_objects *ol, liso_hash *gol, int my_node_id
 
     while (fgets(line, MAX_LINE, fp) != NULL)
     {
-        i = 0;
-        tokens[i] = strtok(line, " ");
-
-        while (tokens[i] != NULL)
-        {
-            i++;
-            tokens[i] = strtok(NULL, " ");
-        }
+        
+        tokens[0] = strtok(line, " ");
+	    tokens[1] = strtok(NULL, " ");
+    
 
         strcpy(((ol->objects)[j]).name, tokens[0]);
         strcpy(((ol->objects)[j]).path, tokens[1]);
