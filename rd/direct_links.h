@@ -10,8 +10,6 @@ typedef struct _link_entry
 	int local_p;
 	int route_p;
 	int server_p;
-	int retransmits;
-	int ack_received;
 } link_entry;
 
 typedef struct _direct_links

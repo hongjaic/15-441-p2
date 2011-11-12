@@ -27,6 +27,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include "constants.h"
+#include "lsa.h"
 
 #define GET_VERSION(version_ttl_type)   ((version_ttl_type>>24)&0xFF)
 #define GET_TTL(version_ttl_type)       ((version_ttl_type>>16)&0xFF)
@@ -36,17 +37,7 @@
 #define SET_TTL(line1, ttl)             (line1|(ttl<16))
 #define SET_TYPE(line1, type)           (line1|type)
 
-#pragma pack(1)
-typedef struct LSA
-{
-    int version_ttl_type;
-    int sender_node_id;
-    int sequence_num;
-    int num_links;
-    int num_objects;
-    char links_objects[];
-} LSA;
-#pragma pack()
+
 
 extern engine_wrapper engine;
 

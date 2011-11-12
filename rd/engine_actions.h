@@ -16,6 +16,7 @@
 #include "local_objects.h"
 #include "routing_table.h"
 #include "constants.h"
+#include "lsa.h"
 
 extern engine_wrapper engine;
 extern int my_node_id;

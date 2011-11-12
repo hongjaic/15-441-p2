@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     filefile = argv[2];
 
     /* Load node configurations settings */
-    load_node_conf(conffile, &dl, my_uri);
+    load_node_conf(conffile, &dl, &rt, my_uri);
     my_node_id = ((dl.links)[0]).id;
 
     /* Load local file information */

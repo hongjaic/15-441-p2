@@ -1,12 +1,13 @@
 #include "file_loader.h"
 
 
-int load_node_conf(char *path, direct_links *dl, char *my_uri)
+int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri)
 {
     FILE *fp;
     char line[MAX_LINE];
     char *tokens[5];
     int i, j = 0;
+    int num_entry;
 
     char hostname[MAX_LINE];
 
@@ -19,6 +20,9 @@ int load_node_conf(char *path, direct_links *dl, char *my_uri)
     {
         return -1;
     }
+
+    dl->num_links = 0;
+    rt->num_entry = 0;
 
     fp = fopen(path, "r");
 
@@ -37,13 +41,25 @@ int load_node_conf(char *path, direct_links *dl, char *my_uri)
         strcpy(((dl->links)[j]).host, tokens[1]);
         ((dl->links)[j]).local_p = atoi(tokens[2]);
         ((dl->links)[j]).route_p = atoi(tokens[3]);
-        ((dl->links)[j]).server_p = atoi(tokens[4]);
-        ((dl->links)[j]).ack_received = 0;
-        
+        ((dl->links)[j]).server_p = atoi(tokens[4]); 
         dl->num_links++;
+
+        ((rt->table)[j]).id = atoi(tokens[0]);
+        ((rt->table)[j]).nexthop = atoi(tokens[0]);
+        ((rt->table)[j]).cost = 1;
+        ((rt->table)[j]).node_status = STATUS_UP;
+        ((rt->table)[j]).lsa = NULL;
+        ((rt->table)[j]).checkers_list = NULL;
+        rt->num_entry++;
 
         memset(line, 0, MAX_LINE);
         j++;
+    }
+
+    num_entry = rt->num_entry;
+    for(j = 0; j < num_entry; j++)
+    {
+        ((rt->table)[j]).checkers_list = (ack_checkers *)malloc(sizeof(ack_checkers) + num_entry*sizeof(ack_checker));
     }
 
     fclose(fp);

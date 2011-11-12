@@ -8,8 +8,10 @@
 #include "direct_links.h"
 #include "local_objects.h"
 #include "constants.h"
+#include "lsa.h"
+#include "routing_table.h"
 
-int load_node_conf(char *path, direct_links *dl, char *my_uri);
+int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri);
 int load_node_file(char *path, local_objects *ol, liso_hash *gol, int my_node_id);
 
 #endif

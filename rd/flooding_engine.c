@@ -324,8 +324,9 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
         {
             if (dl->num_links == forwarder_id)
             {
-                (&((dl->links)[i]))->ack_received = ACK_RECEIVED;
-        
+                //
+                // do something with routing table
+                //
             }
         }
     }
@@ -355,7 +356,9 @@ int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt
             port = ((dl->links)[i]).route_p;
             host = ((dl->links)[i]).host;
             rt_sendto(sockfd, lsa, host, port, size);
-            (&((dl->links)[i]))->ack_received = ACK_NOT_RECEIVED;
+            //
+            //do something with routing table
+            //
         }
     }
 
@@ -367,8 +370,8 @@ int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt
 void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
 {
     int i, num_links;
-    int port;
-    char *host;
+    //int port;
+    //char *host;
     int node_id;
 
     num_links = dl->num_links;
@@ -378,15 +381,16 @@ void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int l
 
         if (node_id != forwarder_id)
         {
-            if ((dl->links)[i].ack_received == ACK_NOT_RECEIVED)
-            {
-                if (get_routing_entry(rt, ((dl->links)[i]).id)->node_status != STATUS_DOWN)
-                {
-                    port = ((dl->links)[i]).route_p;
-                    host = ((dl->links)[i]).host;
-                    rt_sendto(sockfd, lsa, host, port, lsa_size);
-                }
-            }
+            // Do something with routing table
+            //if ((dl->links)[i].ack_received == ACK_NOT_RECEIVED)
+            //{
+            //    if (get_routing_entry(rt, ((dl->links)[i]).id)->node_status != STATUS_DOWN)
+            //    {
+            //        port = ((dl->links)[i]).route_p;
+            //        host = ((dl->links)[i]).host;
+            ///        rt_sendto(sockfd, lsa, host, port, lsa_size);
+            //    }
+            //}
         }
     }
 
@@ -412,7 +416,11 @@ int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt
                 port = ((dl->links)[i]).route_p;
                 host = ((dl->links)[i]).host;
                 rt_sendto(sockfd, lsa, host, port, lsa_size);
-                (&((dl->links)[i]))->ack_received = ACK_NOT_RECEIVED;
+            
+                //
+                //// 
+                //Do something with routing table
+                ///
             }
         }
     }

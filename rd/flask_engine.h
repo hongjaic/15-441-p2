@@ -14,6 +14,7 @@
 #include "constants.h"
 #include "hashset.h"
 #include "direct_links.h"
+#include "lsa.h"
 
 extern engine_wrapper engine;
 extern direct_links dl;
