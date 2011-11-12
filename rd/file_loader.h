@@ -1,0 +1,15 @@
+#ifndef FILE_LOADER_H
+#define FILE_LOADER_H
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include "hashset.h"
+#include "direct_links.h"
+#include "local_objects.h"
+#include "constants.h"
+
+int load_node_conf(char *path, direct_links *dl, char *my_uri);
+int load_node_file(char *path, local_objects *ol, liso_hash *gol, int my_node_id);
+
+#endif

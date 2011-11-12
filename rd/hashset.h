@@ -24,34 +24,28 @@
         +(uint32_t)(((const uint8_t *)(d))[0]))
 #endif
 
-#define HASHSIZE        9377
-#define MAXOBJNUM       9377
-#define MAXOBJNAME      64
-#define MAXVALUELEN     256
-#define MAXURILEN       2048
+#include "constants.h"
 
-typedef struct _path
+typedef struct path
 {
     int node_id;
     int cost;
-    struct _path *next_path_s; 
+    struct path *next_path_s; 
 } path;
 
-typedef struct _pair
+typedef struct pair
 {
     char obj_name[MAXOBJNAME];
     path *path_s;
-    struct _pair *next_pair_s; 
-}pair;
+    struct pair *next_pair_s; 
+} pair;
 
-typedef struct _liso_hash
+typedef struct liso_hash
 {
     pair *hash[HASHSIZE];
     char obj_names[MAXOBJNUM][MAXOBJNAME];
     int num_objs;
-}liso_hash;
-
-liso_hash headers_hash;
+} liso_hash;
 
 void init_hash(liso_hash *h);
 pair *contains_object(liso_hash *h, char *obj_name);

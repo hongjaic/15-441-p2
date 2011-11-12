@@ -5,20 +5,9 @@
  * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include "flooding_engine.h"
 
-/*
-int flooding_engine_create(int port)
+int flooding_engine_create()
 {
     struct sockaddr_in serv_addr;
 
@@ -44,8 +33,7 @@ int flooding_engine_create(int port)
 
     return 1;
 }
-*/
-/*
+
 void update_entry(routing_table *rt, LSA *lsa, int nexthop)
 {
     int node_id;
@@ -96,93 +84,71 @@ void update_entry(routing_table *rt, LSA *lsa, int nexthop)
         entry->node_status = STATUS_DOWN;
     }
 }
-*/
+
 routing_entry *get_routing_entry(routing_table *rt, int node_id)
 {
-    int i;
-    routing_entry *entry;
+    int i, num_entry;
+    routing_entry *table;
 
-    if(rt == NULL)
+    if (rt == NULL)
     {
         return NULL;
     }
 
-    entry = rt->entry;
+    table = rt->table;
 
-    for (i = 0; i < rt->num_entry; i++)
+    num_entry = rt->num_entry;
+    for (i = 0; i < num_entry; i++)
     {
-        if (entry[i].id == node_id)
+        if (table[i].id == node_id)
         {
-            return &(entry[i]);
+            return &((rt->table)[i]);
         }
     }
 
     return NULL;
 }
 
-
-char * get_link_address(int id,direct_links *neighbors)
+link_entry *lookup_link_entry(direct_links *dl, struct in_addr in)
 {
-
-	char *address = (char *)malloc(MAX_OBJ_LEN);
-	int i;
-	for(i = 0; i<neighbors->num_link;i++)
-	{
-		if(neighbors->link[i].id == id)
-		{
-			sprintf(address,"%s:%d/r/",neighbors->link[i].host,neighbors->link[i].server_p);
-		} 
-		
-	}
-	address[0]='\0';
-	return address;
-}
-
-
-/*
-routing_entry *lookup_entry(routing_table *rt, struct in_addr in)
-{
-    int i;
+    int i, num_links;
     char *address = inet_ntoa(in);
-    routing_entry entry;
-    
+    link_entry entry;
 
-    for (i = 1; i < MAX_NODES; i++)
+    num_links = dl->num_links;
+    for (i = 0; i < num_links; i++)
     {
-        entry = rt->nodes[i];
+        entry = (dl->links)[i];
         
         if (strcmp(entry.host, address) == 0)
         {
-			return &(entry);
-        }
-    }
-
-	return NULL;
-}
-*/
-/*
-routing_entry *lookup_id(routing_table *rt, struct in_addr in)
-{
-    int i;
-    char *address = inet_ntoa(in);
-    routing_entry entry;
-
-    for (i = 1; i < MAX_NODES; i++)
-    {
-        entry = (rt->table)[i];
-        
-        if (strcmp(entry.host, address) == 0)
-        {
-			return entry.id;
+			return &((dl->links)[i]);
         }
 	}
 
 	return NULL;
 }
-*/
 
+link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id)
+{
+    int i, num_links;
+    link_entry entry;
 
-void create_packet(LSA *lsa, int type, int sequence_num, direct_links *dl, local_objects *ol)
+    num_links = dl->num_links;
+    for (i = 0; i < num_links; i++)
+    {
+        entry = (dl->links)[i];
+        
+        if (entry.id == node_id)
+        {
+			return &((dl->links)[i]);
+        }
+	}
+
+	return NULL;
+}
+
+int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol)
 {
     int i, name_len;
     int num_links = 0;
@@ -193,13 +159,6 @@ void create_packet(LSA *lsa, int type, int sequence_num, direct_links *dl, local
     link_entry *links;
     int *i_ptr;
     char *c_ptr;
-    
-    /*    
-    SET_VERSION(lsa->version_ttl_type, 0x1);
-    SET_TTL(lsa->version_ttl_type, DEFAULT_TTL);
-    SET_TYPE(lsa->version_ttl_type, type);
-	*/
-    lsa->sequence_num = sequence_num;
 
     if (type == TYPE_ACK || type == TYPE_DOWN)
     {
@@ -208,11 +167,11 @@ void create_packet(LSA *lsa, int type, int sequence_num, direct_links *dl, local
     else if (type == TYPE_LSA)
     {
         num_objects = ol->num_objects;
-        num_links = dl->num_link;
+        num_links = dl->num_links;
         link_size_total += num_links*sizeof(int);
         object_size_total += num_objects*sizeof(int);
         
-        links = dl->link;
+        links = dl->links;
         objects = ol->objects;
 
         for (i = 0; i < num_objects; i++)
@@ -243,6 +202,16 @@ void create_packet(LSA *lsa, int type, int sequence_num, direct_links *dl, local
             i_ptr = (int *)c_ptr;
         }
     }
+
+    lsa->version_ttl_type = SET_VERSION(lsa->version_ttl_type, 0x1);
+    lsa->version_ttl_type = SET_TTL(lsa->version_ttl_type, DEFAULT_TTL);
+    lsa->version_ttl_type = SET_TYPE(lsa->version_ttl_type, type);
+    lsa->sender_node_id = node_id; 
+    lsa->sequence_num = sequence_num;
+    lsa->num_links = num_links;
+    lsa->num_objects = num_objects;
+
+    return sizeof(LSA) + link_size_total + object_size_total;
 }
 
 /*
@@ -261,18 +230,21 @@ binds received lsa info to the node that sent it.
 returns pointer to that node.
 */
 
-LSA *rt_recvfrom(int sockfd, int *forwarder_id, routing_table *rt)
+LSA *rt_recvfrom(int sockfd, int *forwarder_id, direct_links *dl, int *lsa_size)
 {
     struct sockaddr_in cli_addr;
 	socklen_t clilen;
     clilen = sizeof(cli_addr);
+	
     char buf[MAX_BUF];
-   // routing_entry *entry;
+
     int ret;
 
     LSA *lsa = NULL;
 
-	ret = recvfrom(sockfd, buf, MAX_BUF, 0, (struct sockaddr *)&cli_addr, &clilen);
+    link_entry *entry;
+
+	ret = recvfrom(sockfd, buf, MAX_LSA_LEN, 0, (struct sockaddr *)&cli_addr, &clilen);
 	
 	if (ret < 5*sizeof(int))
     {
@@ -285,8 +257,10 @@ LSA *rt_recvfrom(int sockfd, int *forwarder_id, routing_table *rt)
 
     bytes_to_packet(lsa, buf, ret);
 
-   // entry = lookup_entry(rt, cli_addr.sin_addr);
-   // *forwarder_id = lookup_id(rt, cli_addr.sin_addr);
+    entry = lookup_link_entry(dl, cli_addr.sin_addr);
+
+    *forwarder_id = entry->id;
+    *lsa_size = ret;
 
     return lsa;
 }
@@ -295,29 +269,24 @@ LSA *rt_recvfrom(int sockfd, int *forwarder_id, routing_table *rt)
 creates a UDP socket and sends the given string to the given node.
 
 */
-int rt_send(int sockfd, LSA *lsa, int node_id, int port, int size, direct_links *neighbors)
+int rt_sendto(int sockfd, LSA *lsa, char *host, int port, int size)
 {
     struct sockaddr_in cli_addr;
-    struct hostent *h;
     int clilen;
-    
-    char *cli_address =get_link_address(node_id, neighbors);
-
-    if ((h = gethostbyname(cli_address)) == NULL)
-    {
-        return -1;
-    }
+    int ret;
 
     memset(&cli_addr, '\0', sizeof(cli_addr));
     cli_addr.sin_family = AF_INET;
-    cli_addr.sin_addr.s_addr = *(in_addr_t *)h->h_addr;
+    cli_addr.sin_addr.s_addr = inet_addr(host);
     cli_addr.sin_port = htons(port);
 
     clilen = sizeof(cli_addr);
 
-  
-   return sendto(sockfd, lsa, size, 0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+    ret = sendto(sockfd, lsa, size, 0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+
+    return ret;
 }
+
 
 
 /*
@@ -327,55 +296,128 @@ decrements TTL.
 forwards lsa to all its other neighbors.
 cd 
 */
-int lsa_handler(direct_links *neighbors, routing_table *rt ,int sock)
+int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
 {
-	int i = 1;
-	int forwarder_id;
-	short type;
-	LSA *lsa;
+    int forwarder_id;
+    int type;
+    int new_ttl;
+    int lsa_size;
+    LSA *lsa;
+    int i;
 
-	lsa = rt_recvfrom(sock,&forwarder_id,rt);
-	type = GET_TYPE(lsa->version_ttl_type);
-	
-	if(type == 0x00)
-	{
-		for(i=1; i<neighbors->num_link-1;i++)
-		{ 
-			if(neighbors->link[i].id != forwarder_id)
-			{	
-				//decremet TTL !!!!!!!
-				rt_send(sock,lsa,neighbors->link[i].id,neighbors->link[i].route_p,sizeof(lsa),neighbors);
-			}
-		}
+    lsa = rt_recvfrom(sockfd, &forwarder_id, dl, &lsa_size);
 
-	}else if (type == 0x01)
-	{
-		while(neighbors->link[i].id!=forwarder_id)
-		{
-			i++;
-		}
-				
-	}else
-	{
-		printf("hey");
-	}
-		
-	printf("received lsa from %d\n",lsa->sender_node_id);
-	return SUCCESS;
+    type = GET_TYPE(lsa->version_ttl_type);
+
+    if (type == TYPE_LSA || type == TYPE_DOWN)
+    {
+        update_entry(rt, lsa, forwarder_id);
+        
+        new_ttl = GET_TTL(lsa->version_ttl_type) - 1;
+        lsa->version_ttl_type = SET_TTL(lsa->version_ttl_type, new_ttl);
+        
+        flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
+    }
+    else if (type == TYPE_ACK)
+    {
+        for (i = 0; i < dl->num_links; i++)
+        {
+            if (dl->num_links == forwarder_id)
+            {
+                (&((dl->links)[i]))->ack_received = ACK_RECEIVED;
+        
+            }
+        }
+    }
+
+    return 1;
 }
-
 
 /*
 Initializes all global variables, and structures.
 */
 
-void flood_lsa(direct_links *neighbors, LSA *lsa, int sock)
+int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num)
 {
-	int i;
-//forward lsa to all other neighbors
-	for(i=1; i<neighbors->num_link-1;i++)
-	{ 
-		rt_send(sock,lsa,neighbors->link[i].id,neighbors->link[i].route_p,sizeof(lsa),neighbors);
-	}
+    int i, num_links;
+    int port;
+    char *host;
+    int size;
 
+    LSA *lsa = NULL;
+    size = create_packet(lsa, TYPE_LSA, node_id, sequence_num, dl, ol);
+
+    num_links = dl->num_links;
+    for (i = 1; i < num_links; i++)
+    {
+        if (get_routing_entry(rt, ((dl->links)[i]).id)->node_status != STATUS_DOWN)
+        {
+            port = ((dl->links)[i]).route_p;
+            host = ((dl->links)[i]).host;
+            rt_sendto(sockfd, lsa, host, port, size);
+            (&((dl->links)[i]))->ack_received = ACK_NOT_RECEIVED;
+        }
+    }
+
+    //free(lsa);
+    
+    return 1;
+}
+
+void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
+{
+    int i, num_links;
+    int port;
+    char *host;
+    int node_id;
+
+    num_links = dl->num_links;
+    for (i = 1; i < num_links; i++)
+    {
+        node_id = ((dl->links)[i]).id;
+
+        if (node_id != forwarder_id)
+        {
+            if ((dl->links)[i].ack_received == ACK_NOT_RECEIVED)
+            {
+                if (get_routing_entry(rt, ((dl->links)[i]).id)->node_status != STATUS_DOWN)
+                {
+                    port = ((dl->links)[i]).route_p;
+                    host = ((dl->links)[i]).host;
+                    rt_sendto(sockfd, lsa, host, port, lsa_size);
+                }
+            }
+        }
+    }
+
+    //free(lsa);
+}
+
+int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
+{
+    int i, num_links;
+    int port;
+    char *host;
+    int node_id;
+
+    num_links = dl->num_links;
+    for (i = 1; i < num_links; i++)
+    {
+        node_id = ((dl->links)[i]).id;
+
+        if (node_id != forwarder_id)
+        {
+            if (get_routing_entry(rt, ((dl->links)[i]).id)->node_status != STATUS_DOWN)
+            {
+                port = ((dl->links)[i]).route_p;
+                host = ((dl->links)[i]).host;
+                rt_sendto(sockfd, lsa, host, port, lsa_size);
+                (&((dl->links)[i]))->ack_received = ACK_NOT_RECEIVED;
+            }
+        }
+    }
+
+    //free(lsa);
+
+    return 1;
 }
