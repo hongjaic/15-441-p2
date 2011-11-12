@@ -8,6 +8,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     char *tokens[5];
     int i, j = 0;
     int num_entry;
+    ack_checkers *checkers_j;
 
     char hostname[MAX_LINE];
 
@@ -59,7 +60,16 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     num_entry = rt->num_entry;
     for(j = 0; j < num_entry; j++)
     {
-        ((rt->table)[j]).checkers_list = (ack_checkers *)malloc(sizeof(ack_checkers) + num_entry*sizeof(ack_checker));
+        checkers_j = ((rt->table)[j]).checkers_list;
+        checkers_j = (ack_checkers *)malloc(sizeof(ack_checkers) + num_entry*sizeof(ack_checker));
+        checkers_j->num_links = dl->num_links;
+        
+        for(i = 0; i < checkers_j->num_links; i++)
+        {
+            ((checkers_j->checkers)[i]).id = ((dl->links)[i]).id;
+            ((checkers_j->checkers)[i]).ack_received = ACK_RECEIVED;
+            ((checkers_j->checkers)[i]).retransmit = 0;
+        }
     }
 
     fclose(fp);
