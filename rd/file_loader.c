@@ -6,7 +6,8 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     FILE *fp;
     char line[MAX_LINE];
     char *tokens[5];
-    int i, j = 0;
+    int i, j  = 0,k;
+    
     int num_entry;
     ack_checkers *checkers_j;
 
@@ -47,7 +48,13 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
 
         ((rt->table)[j]).id = atoi(tokens[0]);
         ((rt->table)[j]).nexthop = atoi(tokens[0]);
-        ((rt->table)[j]).cost = 1;
+		
+		k =1;
+        if (j == 0){
+        	k = 0;
+        }
+        
+        ((rt->table)[j]).cost = k;
         ((rt->table)[j]).node_status = STATUS_UP;
         ((rt->table)[j]).lsa = NULL;
         ((rt->table)[j]).checkers_list = NULL;
@@ -60,8 +67,8 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     num_entry = rt->num_entry;
     for(j = 0; j < num_entry; j++)
     {
+        ((rt->table)[j]).checkers_list = (ack_checkers *)malloc(sizeof(ack_checkers) + num_entry*sizeof(ack_checker));
         checkers_j = ((rt->table)[j]).checkers_list;
-        checkers_j = (ack_checkers *)malloc(sizeof(ack_checkers) + num_entry*sizeof(ack_checker));
         checkers_j->num_links = dl->num_links;
         
         for(i = 0; i < checkers_j->num_links; i++)
