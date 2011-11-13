@@ -12,7 +12,6 @@ int flooding_engine_create()
     struct sockaddr_in serv_addr;
 
     engine.udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
     if (engine.udp_sock < 0)
     {
         fprintf(stderr, "Failed to create UDP socket.\n");
@@ -69,14 +68,14 @@ void update_entry(routing_table *rt, direct_links *dl, LSA *lsa, int lsa_size, i
     entry->lsa->num_links = lsa->num_links;
     entry->lsa->num_objects = lsa->num_objects;
     memcpy(entry->lsa->links_objects, lsa->links_objects, lsa_size - 20);
-    
+
     if (entry->checkers_list == NULL)
     {
         entry->checkers_list = (ack_checkers *)malloc(sizeof(ack_checkers) + dl->num_links*sizeof(ack_checker));
     }
 
     curr_checkers = entry->checkers_list;
-    
+
     for (i = 0; i < dl->num_links; i++)
     {
         curr_checkers->checkers[i].id = dl->links[i].id;
@@ -180,7 +179,7 @@ link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id)
     return NULL;
 }
 
-int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol)
+LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol)
 {
     int i, name_len;
     int num_links = 0;
@@ -191,7 +190,7 @@ int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_link
     link_entry *links;
     int *i_ptr;
     char *c_ptr;
-
+    LSA *lsa;
     if (type == TYPE_ACK || type == TYPE_DOWN)
     {
         lsa = (LSA *)malloc(sizeof(LSA));
@@ -216,7 +215,7 @@ int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_link
         c_ptr = lsa->links_objects;
         i_ptr = (int *)c_ptr;
 
-        for (i = 0; i < num_links; i++)
+        for (i = 1; i < num_links; i++)
         {
             *i_ptr = links[i].id;
             i_ptr++;
@@ -238,12 +237,13 @@ int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_link
     lsa->version_ttl_type = SET_VERSION(lsa->version_ttl_type, 0x1);
     lsa->version_ttl_type = SET_TTL(lsa->version_ttl_type, DEFAULT_TTL);
     lsa->version_ttl_type = SET_TYPE(lsa->version_ttl_type, type);
-    lsa->sender_node_id = node_id; 
+    lsa->sender_node_id = node_id;
     lsa->sequence_num = sequence_num;
-    lsa->num_links = num_links;
+    lsa->num_links = num_links-1;
     lsa->num_objects = num_objects;
 
-    return sizeof(LSA) + link_size_total + object_size_total;
+    *size = sizeof(LSA) + link_size_total + object_size_total;
+    return lsa;
 }
 
 /*
@@ -253,11 +253,11 @@ int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_link
 void bytes_to_packet(LSA *lsa, char *buf, int size)
 {
     lsa = (LSA *)malloc(size);
-    memcpy(lsa, buf, size); 
+    memcpy(lsa, buf, size);
 }
 
 /*
-   wrapper for recv_from. 
+   wrapper for recv_from.
    binds received lsa info to the node that sent it.
    returns pointer to that node.
    */
@@ -281,8 +281,8 @@ LSA *rt_recvfrom(int sockfd, int *forwarder_id, direct_links *dl, int *lsa_size)
     if (ret < 5*sizeof(int))
     {
 
-        //could not retrienve src_id from lsa. no way of knowing who is original sender. 
-        //no way of buffering lsa until it has been completely received. 
+        //could not retrienve src_id from lsa. no way of knowing who is original sender.
+        //no way of buffering lsa until it has been completely received.
         // ignore this LSA. hope retransmission works.
         return NULL;
     }
@@ -323,10 +323,10 @@ int rt_sendto(int sockfd, LSA *lsa, char *host, int port, int size)
 
 /*
    handler for any incoming lsa advertisements from other routing daemons.
-   receives the incoming lsa from a neighbor (forwarder_id) 
+   receives the incoming lsa from a neighbor (forwarder_id)
    decrements TTL.
    forwards lsa to all its other neighbors.
-   cd 
+   cd
    */
 int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
 {
@@ -345,7 +345,8 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
     {
         update_entry(rt, dl, lsa, lsa_size, forwarder_id);
 
-        flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
+        //flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
+	// dont do this here!@!!?!?!
     }
     else if (type == TYPE_ACK)
     {
@@ -373,22 +374,22 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
    Initializes all global variables, and structures.
    */
 
-int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num)
+int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num)
 {
     int i, num_links;
     int port;
     char *host;
     int size;
     ack_checkers *curr_checkers;
-    
-    LSA *lsa = NULL;
-    size = create_packet(lsa, TYPE_LSA, node_id, sequence_num, dl, ol);
+
+    LSA *lsa;
+    lsa = create_packet(&size, lsa_type, node_id, sequence_num, dl, ol);
 
     // might need to change this part
     //
     //
     //
-    update_entry(rt, dl, lsa, size, node_id);
+    update_entry(rt, dl,lsa, size, node_id);
 
     curr_checkers = get_routing_entry(rt, node_id)->checkers_list;
 
@@ -400,9 +401,9 @@ int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt
             port = ((dl->links)[i]).route_p;
             host = ((dl->links)[i]).host;
             rt_sendto(sockfd, lsa, host, port, size);
- 
+
             curr_checkers->checkers[i].ack_received = ACK_NOT_RECEIVED;
-            curr_checkers->checkers[i].ack_received = 0;
+            //curr_checkers->checkers[i].ack_received = 0; //!!!!???
         }
     }
 
@@ -411,16 +412,21 @@ int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt
     return 1;
 }
 
-void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
+void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
 {
     int i, num_links;
     int port;
     char *host;
     int node_id;
     ack_checkers *curr_checkers;
+    routing_entry *entry;
+    if (lsa == NULL)
+    {
+       return;
+    }
 
     curr_checkers = get_routing_entry(rt, lsa->sender_node_id)->checkers_list;
-    
+
     num_links = dl->num_links;
     for (i = 1; i < num_links; i++)
     {
@@ -430,12 +436,21 @@ void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int l
         {
             if (curr_checkers->checkers[i].ack_received == ACK_NOT_RECEIVED)
             {
-                if (get_routing_entry(rt, ((dl->links)[i]).id)->node_status != STATUS_DOWN)
+                entry = get_routing_entry(rt, node_id);
+                if(curr_checkers->checkers[i].retransmit == RETRANSMIT_TIME)
+                {
+                   entry->node_status = STATUS_DOWN;
+                   printf("Node %d is down!!!\n",node_id);
+
+                   //flood resot fo neighbros , tell node down. !!!!
+
+                }else if (entry->node_status != STATUS_DOWN)
                 {
                     port = ((dl->links)[i]).route_p;
                     host = ((dl->links)[i]).host;
-                    rt_sendto(sockfd, lsa, host, port, lsa_size);
+                    //rt_sendto(sockfd, lsa, host, port, lsa_size);
                     curr_checkers->checkers[i].retransmit++;
+                    printf("retransmition #%d: %d's LSA to link %d\n",curr_checkers->checkers[i].retransmit,lsa->sender_node_id,node_id);
                 }
             }
         }
@@ -443,6 +458,7 @@ void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int l
 
     //free(lsa);
 }
+
 
 int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
 {
@@ -470,7 +486,7 @@ int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt
                 port = ((dl->links)[i]).route_p;
                 host = ((dl->links)[i]).host;
                 rt_sendto(sockfd, lsa, host, port, lsa_size);
-                                
+
                 curr_checkers->checkers[i].ack_received = ACK_NOT_RECEIVED;
                 curr_checkers->checkers[i].ack_received = 0;
             }

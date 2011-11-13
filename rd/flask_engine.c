@@ -17,6 +17,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/select.h>
 #include <errno.h>
 #include <netdb.h>
@@ -28,7 +29,7 @@ int flask_engine_create()
 {
     struct sockaddr_in addr;
     struct hostent *h;
-
+    int yes = 1;
     engine.tcp_sock = socket(PF_INET, SOCK_STREAM, 0);
 
     if (engine.tcp_sock == -1)
@@ -42,7 +43,9 @@ int flask_engine_create()
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(engine.tcp_port);
-    addr.sin_addr.s_addr = *(in_addr_t *)h->h_addr;
+    //addr.sin_addr.s_addr =  *(in_addr_t *)h->h_addr;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    setsockopt(engine.tcp_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
     if (bind(engine.tcp_sock, (struct sockaddr *) &addr, sizeof(addr)))
     {
@@ -61,13 +64,18 @@ int flask_engine_create()
         fprintf(stderr, "failed to listen.\n");
         exit(EXIT_FAILURE);
     }
+
+    printf("listening on %d\n",engine.tcp_port);
     return 1;
 }
 
 int new_client_handler(int sock)
 {
-    socklen_t cli_size;
-    struct sockaddr_in cli_addr;
+    // !!!!!
+    //struct sockaddr_in cli_addr;
+    struct sockaddr_storage cli_addr;
+
+    socklen_t cli_size = sizeof(cli_addr);
     int client_sock;
 
     if (engine.nfds <= MAX_CONNECTIONS - 1)
@@ -76,6 +84,8 @@ int new_client_handler(int sock)
 
         if (client_sock < 0)
         {
+            printf("%d and %s\n",errno,strerror(errno));
+
             return -1;
         }
 
@@ -116,6 +126,9 @@ int flask_request_handler(int i)
     {
         init_connection(curr_connection);
         close(i);
+        FD_CLR(i,&(engine.rfds));
+        FD_CLR(i,&(engine.wfds));
+        return 0;
     }
     else if (readret < 1)
     {
@@ -138,9 +151,10 @@ int flask_request_handler(int i)
     }
 
     if (no_data_read == 0)
-    {
+     {
         memcpy(curr_connection->request, engine.buf, readret);
         curr_connection->request_index = readret;
+        curr_connection->status = 200;
         process_buffer(curr_connection, i);
         build_response(curr_connection);
     }
@@ -166,14 +180,15 @@ int flask_response_handler(int i)
             close(engine.udp_sock);
             close(engine.tcp_sock);
             collapse(&gol);
+            printf("fatal error\n");
             exit(EXIT_FAILURE);
         }
     }
 
     init_connection(curr_connection);
-    FD_CLR(i, &(engine.rfds));
-    FD_CLR(i, &(engine.wfds));
-    close(i);
+  //  FD_CLR(i, &(engine.rfds));
+  //  FD_CLR(i, &(engine.wfds));
+    //close(i);
 
     return 1;
 }
@@ -181,7 +196,7 @@ int flask_response_handler(int i)
 void process_buffer(tcp_connection *connection, int i)
 {
     char *tokens[5];
-    int j;
+   // int j;
 
     tokens[0] = strtok(connection->request, " ");
 
@@ -192,6 +207,11 @@ void process_buffer(tcp_connection *connection, int i)
         return;
     }
 
+    tokens[1] = strtok(NULL," ");
+    tokens[2] = strtok(NULL," ");
+    tokens[3] = strtok(NULL," ");
+    tokens[4] = strtok(NULL," ");
+    /* !!!!!
     for (j = 1; j < 5; j++)
     {
         tokens[j] = strtok(NULL, " ");
@@ -216,16 +236,31 @@ void process_buffer(tcp_connection *connection, int i)
             }
         }
     }
-
+   */
     strcpy(connection->method, tokens[0]);
     strcpy(connection->name_length, tokens[1]);
-    strcpy(connection->name, tokens[2]);
-
+   // strcpy(connection->name, tokens[2]);
+    strncpy(connection->name,tokens[2],atoi(tokens[1]));
     if (strcmp(tokens[0], "ADDFILE") == 0)
     {
         strcpy(connection->path_length, tokens[3]);
-        strcpy(connection->path, tokens[4]);
+       // strcpy(connection->path, tokens[4]);
+       strncpy(connection->path, tokens[4],atoi(tokens[3]));
     }
+}
+
+void get_local_file_path(tcp_connection *connection)
+{
+   int i;
+   for (i = 0; i<ol.num_objects;i++)
+   {
+      if(strcmp(connection->name,ol.objects[i].name) == 0)
+      {
+         strcpy(connection->path,ol.objects[i].path);
+         return;
+      }
+   }
+   connection->path[0] = '\0';
 }
 
 void build_response(tcp_connection *connection)
@@ -244,8 +279,9 @@ void build_response(tcp_connection *connection)
         return;
     }
 
-    if (strcmp(connection->method, "RDGET"))
+    if (strcmp(connection->method, "RDGET")== 0)
     {
+
         obj = get_paths(&gol, connection->name);
 
         if (obj == NULL)
@@ -255,11 +291,18 @@ void build_response(tcp_connection *connection)
         }
         else
         {
+
             node_id = obj->node_id;
 
             if (node_id == my_node_id)
             {
-                sprintf(uri, "%s/static/%s", my_uri, connection->name);
+                get_local_file_path(connection);
+                if(connection->path[0] == '\0'){
+                   connection->status = 500;
+                   sprintf(connection->response, "ERROR found object's host, but could not retrieve  path ");
+                }else{
+                  sprintf(uri, "%s%s", my_uri, connection->path);
+               }
             }
             else
             {
@@ -273,10 +316,10 @@ void build_response(tcp_connection *connection)
 
             connection->status = 200;
             sprintf(connection->response, "OK %d %s ", (int)(strlen(uri)), uri);
-            
-        }
+         }
+
     }
-    else if (strcmp(connection->method, "ADDFILE"))
+    else if (strcmp(connection->method, "ADDFILE")== 0)
     {
         obj = get_paths(&gol, connection->name);
 
@@ -294,7 +337,7 @@ void build_response(tcp_connection *connection)
 
             fp = fopen(filefile, "a");
             fprintf(fp, "%s %s\n", connection->name, connection->path);
-                
+
             connection->status = 200;
             sprintf(connection->response, "OK 0 ");
         }

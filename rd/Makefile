@@ -14,7 +14,7 @@ default: rd
 #testfile:
 #	@gcc test.c hashset.c -o testfile -Wall -Werror
 
-rd: engine_actions.c hashset.c file_loader.c flooding_engine.c flask_engine.c tcp_connection.c
+rd: rd.c engine_actions.c hashset.c file_loader.c flooding_engine.c flask_engine.c tcp_connection.c
 	@gcc rd.c engine_actions.c hashset.c file_loader.c flooding_engine.c flask_engine.c tcp_connection.c -o rd -g -Wall -Werror
 
 clean:

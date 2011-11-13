@@ -7,7 +7,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     char line[MAX_LINE];
     char *tokens[5];
     int i, j  = 0,k;
-    
+
     int num_entry;
     ack_checkers *checkers_j;
 
@@ -41,19 +41,20 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
 
         ((dl->links)[j]).id = atoi(tokens[0]);
         strcpy(((dl->links)[j]).host, tokens[1]);
-        ((dl->links)[j]).local_p = atoi(tokens[2]);
-        ((dl->links)[j]).route_p = atoi(tokens[3]);
-        ((dl->links)[j]).server_p = atoi(tokens[4]); 
+
+        ((dl->links)[j]).route_p = atoi(tokens[2]);
+        ((dl->links)[j]).local_p = atoi(tokens[3]);
+        ((dl->links)[j]).server_p = atoi(tokens[4]);
         dl->num_links++;
 
         ((rt->table)[j]).id = atoi(tokens[0]);
         ((rt->table)[j]).nexthop = atoi(tokens[0]);
-		
+
 		k =1;
         if (j == 0){
         	k = 0;
         }
-        
+
         ((rt->table)[j]).cost = k;
         ((rt->table)[j]).node_status = STATUS_UP;
         ((rt->table)[j]).lsa = NULL;
@@ -73,7 +74,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
         ((rt->table)[j]).checkers_list = (ack_checkers *)malloc(sizeof(ack_checkers) + num_entry*sizeof(ack_checker));
         checkers_j = ((rt->table)[j]).checkers_list;
         checkers_j->num_links = dl->num_links;
-        
+
         for(i = 0; i < checkers_j->num_links; i++)
         {
             ((checkers_j->checkers)[i]).id = ((dl->links)[i]).id;
@@ -85,7 +86,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     fclose(fp);
 
     gethostname(hostname, MAX_LINE);
-    sprintf(my_uri, "http://%s:%d", hostname, ((dl->links)[i]).server_p);
+    sprintf(my_uri, "http://%s:%d", hostname, ((dl->links)[0]).server_p);
 
     return 1;
 }
@@ -111,10 +112,10 @@ int load_node_file(char *path, local_objects *ol, liso_hash *gol, int my_node_id
 
     while (fgets(line, MAX_LINE, fp) != NULL)
     {
-        
+
         tokens[0] = strtok(line, " ");
-	    tokens[1] = strtok(NULL, " ");
-    
+        tokens[1] = strtok(NULL, " ");
+
 
         strcpy(((ol->objects)[j]).name, tokens[0]);
         strcpy(((ol->objects)[j]).path, tokens[1]);

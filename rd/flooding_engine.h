@@ -1,5 +1,5 @@
 /**
- * CS 15-441 Computer Netwoks 
+ * CS 15-441 Computer Netwoks
  *
  * @file    flooding_engine.h
  * @author  Hong Jai Cho <hongjaic>, Raul Gonzales <rggonzal>
@@ -47,11 +47,11 @@ routing_entry *get_routing_entry(routing_table *rt, int node_id);
 link_entry *lookup_link_entry(direct_links *dl, struct in_addr in);
 link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id);
 void bytes_to_packet(LSA *lsa, char *buf, int size);
-int create_packet(LSA *lsa, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol);
+LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol);
 char *get_neighbor_address(int node_id);
-int flood_lsa(int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num);
+int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num);
 int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id);
-void retransmit(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id);
+void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id);
 LSA *rt_recvfrom(int sockfd, int *forwarder_id, direct_links *dl, int *lsa_size);
 int rt_sendto(int sockfd, LSA *lsa, char *host, int port, int size);
 int lsa_handler(int sockfd, direct_links *dl, routing_table *rt);

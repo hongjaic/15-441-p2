@@ -20,19 +20,19 @@ import shutil
 import tempfile
 
 # Remember original sys.path.
-prev_sys_path = list(sys.path) 
+prev_sys_path = list(sys.path)
 
 # Add each new site-packages directory.
 for directory in ALLDIRS:
     site.addsitedir(directory)
 
 # Reorder sys.path so new directories at the front.
-new_sys_path = [] 
-for item in list(sys.path): 
-    if item not in prev_sys_path: 
-        new_sys_path.append(item) 
-        sys.path.remove(item) 
-        sys.path[:0] = new_sys_path 
+new_sys_path = []
+for item in list(sys.path):
+    if item not in prev_sys_path:
+        new_sys_path.append(item)
+        sys.path.remove(item)
+        sys.path[:0] = new_sys_path
 
 
 from flask import Flask, redirect, url_for, request
@@ -63,37 +63,40 @@ def index():
 	return redirect(url_for('static', filename='index.html'))
 
 @app.route('/r',methods=["GET"])
-    
+
 def get_redir():
-    
+
 
     objname = request.args.get('object')
-    
+
     return redirect(url_for('static', filename='f/'+objname))
-   
+
 
 @app.route('/static/f/<obj>')
 def rd_getrd(obj):
 
-    rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
- 
-    rdsock.connect((localhost,locport))
-
     objname = str(obj)
-    rdsock.send('RDGET ' +objname.length+' '+ objname)
-    rdresponse = rdsock.recv(4096)
+    objlen = str(len(objname))
+    msg = 'RDGET '+objlen+' '+objname
 
+    rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    rdsock.connect((localhost,locport))
+    print 'connected'
+    rdsock.send(msg)
+    print 'sent '+msg
+    rdresponse = rdsock.recv(4096)
+    print 'recv '+rdresponse
     rdsock.close()
 
     responsewords = rdresponse.split(' ')
 
     status = responsewords[0]
-    url = responsewords[1]
-    
+    url_len = responsewords[1]
+    url = responsewords[2][:-1]
 
     if status == 'OK':
-        resp = flask.send_file(urllib.urlopen(url))
+        the_file = urllib.urlopen(url)
+        resp = flask.send_file(the_file)
     elif status == 'NOTFOUND':
         resp = flask.make_response(flask.render_template('404.html'), 404)
     else:
@@ -105,7 +108,7 @@ def rd_getrd(obj):
 @app.route('/r',methods=["POST"])
 def rd_addfile():
     curr_root = os.getcwd()
-    
+
     objname = request.form['object']
 
     file = request.files['uploadFile']
@@ -130,16 +133,20 @@ def rd_addfile():
     shutil.move(tmpname, curr_root + finalname)
 
     f.close()
-   
+
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost, locport))
-    rdsock.send('ADDFILE ' + str(objname).length +' '+str(objname)+' '+ str(finalname).length+' '+str(finalname))
+    obj = str(objname)
+    objlen = str(len(obj))
+    final = str(finalname)
+    finallen = str(len(final))
+    rdsock.send('ADDFILE ' + objlen +' '+obj+' '+final+' '+finallen)
 
     rdresponse = rdsock.recv(4096)
     rdsock.close()
 
     responsewords = rdresponse.split(' ')
-    
+
     if responsewords[0] == 'OK':
         resp = redirect(url_for('static', filename='index.html'))
     else:
@@ -150,21 +157,21 @@ def rd_addfile():
 
 def generate(url):
     fp = urllib.urlopen(url)
-    
+
     while True:
         strm = fp.read(4096)
-        
+
         if len(strm) == 0:
             break
-        
+
         yield strm
-        
+
     fp.close()
 
 
 if __name__ == '__main__':
 	if (len(sys.argv) > 0):
 		app.run(host='0.0.0.0', port=int(servport), threaded=True, processes=1)
-	else:	
+	else:
 		print "Usage ./webserver\n"
 
