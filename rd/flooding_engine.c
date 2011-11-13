@@ -445,7 +445,6 @@ void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *r
                    entry->node_status = STATUS_DOWN;
                    printf("Node %d is down!!!\n",node_id);
 
-                   //flood resot fo neighbros , tell node down. !!!!
 
                 }else if (entry->node_status != STATUS_DOWN)
                 {
