@@ -61,7 +61,8 @@ int engine_event()
 
       if (sel_return == 0)
       {
-
+            //!!!!!!!!!!!!! big issue, we are flooding up to three different types of LSA in this loop. this means,
+            //we should be "saving" all three LSAs... this is a problem...
 
          /* It's time to flood */
          if (iterations == FLOODING_PERIOD)
@@ -83,7 +84,6 @@ int engine_event()
 
             //for all nodes, forward/flood their received LSAs....
             for (i = 1; i < rt.num_entry; i++)
-            {
                entry = (rt.table[i]);
 
                if (entry.lsa_is_new == 1)
