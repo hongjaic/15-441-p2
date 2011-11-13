@@ -104,15 +104,9 @@ int engine_event()
             for (i = 0; i < rt.num_entry; i++)
             {
                entry = rt.table[i];
-               if(entry.lsa !=NULL){
-                  printf("node %d has LSA\n",entry.id);
-                  retransmit_missing(engine.udp_sock,entry.lsa,&dl,&rt,entry.lsa_size,entry.forwarder_id);
-               }else{
-                  printf("node %d has NULL LSA\n",entry.id);
-               }
+               retransmit_missing(engine.udp_sock,entry.lsa,&dl,&rt,entry.lsa_size,entry.forwarder_id);
+
             }
-
-
          }
 
          iterations++;
