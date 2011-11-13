@@ -84,6 +84,7 @@ int engine_event()
 
             //for all nodes, forward/flood their received LSAs....
             for (i = 1; i < rt.num_entry; i++)
+            {
                entry = (rt.table[i]);
 
                if (entry.lsa_is_new == 1)
@@ -93,7 +94,7 @@ int engine_event()
             }
             printf("reset!!!\n");
             iterations = 0;
-
+         }
 
          /* If an ACK has not been received by not, retransmit */
          // !!!! changed == to <= .. want to retransmit first 3 iterations after flooding
