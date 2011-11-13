@@ -370,10 +370,8 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
     return 1;
 }
 
-/*
-   Initializes all global variables, and structures.
-   */
-
+// !!! changed flood_lsa, to a more general flood() function. this way we can use this function to flood our own LSAs, as well as flooding
+// when a neighbor is down
 int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num)
 {
     int i, num_links;
