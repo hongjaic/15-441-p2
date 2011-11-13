@@ -33,11 +33,9 @@
 #define GET_TTL(version_ttl_type)       ((version_ttl_type>>16)&0xFF)
 #define GET_TYPE(version_ttl_type)      (version_ttl_type&0xFFFF)
 
-#define SET_VERSION(line1, version)     (line1|(version<<24))
-#define SET_TTL(line1, ttl)             (line1|(ttl<16))
-#define SET_TYPE(line1, type)           (line1|type)
-
-
+#define SET_VERSION(line1, version) ((line1&(0x00FFFFFF))|(version<<24))
+#define SET_TTL(line1, ttl) ((line1&(0xFF00FFFF))|(ttl<<16))
+#define SET_TYPE(line1, type) ((line1&(0xFFFF0000))|type)
 
 extern engine_wrapper engine;
 
