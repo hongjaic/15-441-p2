@@ -179,6 +179,10 @@ link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id)
     return NULL;
 }
 
+// !!! this function used to return int size, and we passed in LSA *lsa as a param.
+// not sure why it wasn't working, but the lsa was returning NULL. I have a hunch it was because of the whole lsa flexible structure
+// but idk why that should matter.... anyway, passing in lsa, and mallocing here  wasn't working. so instead, I pass in size, and simply return
+// the lsa. this works.
 LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol)
 {
     int i, name_len;
@@ -371,7 +375,8 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
 }
 
 // !!! changed flood_lsa, to a more general flood() function. this way we can use this function to flood our own LSAs, as well as flooding
-// when a neighbor is down
+// when a neighbor is down tryied to merge this with flood_recevied_lsas, but it started getting ugly... too many params, stuff...
+// so just left it for now.
 int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num)
 {
     int i, num_links;
