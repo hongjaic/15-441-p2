@@ -346,7 +346,7 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
         update_entry(rt, dl, lsa, lsa_size, forwarder_id);
 
         //flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
-	// dont do this here!@!!?!?!
+	// !!! commented out above line, we shouldn't flood anything here.... flooding is done in select-loop
     }
     else if (type == TYPE_ACK)
     {
@@ -403,7 +403,7 @@ int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_
             rt_sendto(sockfd, lsa, host, port, size);
 
             curr_checkers->checkers[i].ack_received = ACK_NOT_RECEIVED;
-            //curr_checkers->checkers[i].ack_received = 0; //!!!!???
+            //curr_checkers->checkers[i].ack_received = 0; //!!!! is this just a typo?
         }
     }
 

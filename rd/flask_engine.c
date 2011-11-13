@@ -71,7 +71,8 @@ int flask_engine_create()
 
 int new_client_handler(int sock)
 {
-    // !!!!!
+    // !!!!! for some reason the sock_addr_in was breaking CP1 functionality. I changed it to sock_Addr_storage jsut to check, cus I wasn't sure
+    // what was going on.... it works with storage, but not with in.
     //struct sockaddr_in cli_addr;
     struct sockaddr_storage cli_addr;
 
