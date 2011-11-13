@@ -40,8 +40,7 @@ int engine_event()
     tv.tv_sec = TIMEOUT;
     tv.tv_usec = 0;
 
-    //LSA my_lsa;
-    int lsa_sent = 0;
+    routing_entry entry;
 
     while (1)
     {
@@ -68,14 +67,24 @@ int engine_event()
             {
                 flood_lsa(engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
                 sequence_number++;
+
+                for (i = 1; i < rt.num_entry; i++)
+                {
+                    entry = (rt.table[i]);
+                    
+                    if (entry.lsa_is_new == 1)
+                    {
+                        flood_received_lsa(engine.udp_sock, entry.lsa, &dl, &rt, entry.lsa_size, entry.forwarder_id);
+                    }
+                }
+                
                 iterations = 0;
-                lsa_sent = 1;
             }
 
             /* If an ACK has not been received by not, retransmit */
             else if (iterations == RETRANSMIT_TIME)
             {
-                lsa_sent = 0;
+
             }
         }
 

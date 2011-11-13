@@ -24,6 +24,9 @@ typedef struct routing_entry
     int cost;
     int node_status;
     LSA *lsa;
+    int lsa_size;
+    int lsa_is_new;
+    int forwarder_id;
     ack_checkers *checkers_list;
 } routing_entry;
 

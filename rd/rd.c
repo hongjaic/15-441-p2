@@ -32,8 +32,8 @@ local_objects ol;
 liso_hash gol;
 int my_node_id;
 int sequence_number;
+int num_neighbors;
 char my_uri[MAX_URI_LEN];
-
 char *conffile;
 char *filefile;
 
@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
     /* Load node configurations settings */
     load_node_conf(conffile, &dl, &rt, my_uri);
     my_node_id = ((dl.links)[0]).id;
+
+    num_neighbors = dl.num_links;
 
     /* Load local file information */
     load_node_file(filefile, &ol, &gol, my_node_id);
