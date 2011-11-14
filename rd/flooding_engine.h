@@ -40,11 +40,11 @@
 extern engine_wrapper engine;
 
 int flooding_engine_create();
-void update_entry(routing_table *rt, direct_links *dl, LSA *lsa, int lsa_size, int nexthop);
+void update_entry(routing_entry *entry,routing_table *rt, direct_links *dl, LSA *lsa, int lsa_size, int nexthop);
 routing_entry *get_routing_entry(routing_table *rt, int node_id);
-link_entry *lookup_link_entry(direct_links *dl, struct in_addr in);
+//link_entry *lookup_link_entry(direct_links *dl, struct in_addr in);
 link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id);
-void bytes_to_packet(LSA *lsa, char *buf, int size);
+LSA * bytes_to_packet(char *buf, int size);
 LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol);
 char *get_neighbor_address(int node_id);
 int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num);

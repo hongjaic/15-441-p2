@@ -35,7 +35,6 @@ int engine_event()
 {
    int i, iterations = RETRANSMIT_TIME+1;
    int sel_return = -1;
-   int down_id;
    struct timeval tv;
    tv.tv_sec = TIMEOUT;
    tv.tv_usec = 0;
@@ -70,18 +69,18 @@ int engine_event()
             //Flood our own LSA
             flood(TYPE_LSA,engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
             sequence_number++;
-
+			
+			/*
             //!!!! for all neighbors, flood a type-3 lsa for all down neighbors
             for(i =1; i < dl.num_links; i++)
             {
                down_id = dl.links[i].id;
                if (get_routing_entry(&rt,down_id)->node_status == STATUS_DOWN){
-                  printf("flooding node %d is down\n",down_id);
                   flood(TYPE_DOWN,engine.udp_sock, &dl, &ol, &rt, down_id, sequence_number);
                   sequence_number++;
                }
             }
-
+			*/
             //for all nodes, forward/flood their received LSAs....
             for (i = 1; i < rt.num_entry; i++)
             {
@@ -92,7 +91,6 @@ int engine_event()
                   flood_received_lsa(engine.udp_sock, entry.lsa, &dl, &rt, entry.lsa_size, entry.forwarder_id);
                }
             }
-            printf("reset!!!\n");
             iterations = 0;
          }
 
@@ -120,8 +118,7 @@ int engine_event()
                {
                   continue;
                }
-               FD_SET(i,&engine.wfds);
-               engine.temp_wfds = engine.wfds;
+               
             }
 
             if (FD_ISSET(i, &engine.temp_wfds))

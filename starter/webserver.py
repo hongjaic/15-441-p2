@@ -143,11 +143,13 @@ def rd_addfile():
     rdsock.send('ADDFILE ' + objlen +' '+obj+' '+final+' '+finallen)
 
     rdresponse = rdsock.recv(4096)
+
     rdsock.close()
 
     responsewords = rdresponse.split(' ')
 
     if responsewords[0] == 'OK':
+
         resp = redirect(url_for('static', filename='index.html'))
     else:
         resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)

@@ -11,6 +11,13 @@ typedef struct LSA
     int num_objects;
     char links_objects[];
 } LSA;
+
+
+typedef struct store{
+   int num_lsa;
+   LSA *lsa;
+   LSA *next;
+}lsa_store;
 #pragma pack()
 
 #endif

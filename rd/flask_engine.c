@@ -158,6 +158,7 @@ int flask_request_handler(int i)
         curr_connection->status = 200;
         process_buffer(curr_connection, i);
         build_response(curr_connection);
+        FD_SET(i, &(engine.wfds));
     }
 
     return 1;
@@ -240,12 +241,10 @@ void process_buffer(tcp_connection *connection, int i)
    */
     strcpy(connection->method, tokens[0]);
     strcpy(connection->name_length, tokens[1]);
-   // strcpy(connection->name, tokens[2]);
     strncpy(connection->name,tokens[2],atoi(tokens[1]));
     if (strcmp(tokens[0], "ADDFILE") == 0)
     {
         strcpy(connection->path_length, tokens[3]);
-       // strcpy(connection->path, tokens[4]);
        strncpy(connection->path, tokens[4],atoi(tokens[3]));
     }
 }
