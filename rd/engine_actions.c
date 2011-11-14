@@ -36,7 +36,7 @@ int engine_event()
    int i, iterations = RETRANSMIT_TIME+1;
    int sel_return = -1;
    struct timeval tv;
-   tv.tv_sec = TIMEOUT;
+   tv.tv_sec = 5;//TIMEOUT;
    tv.tv_usec = 0;
 
    routing_entry entry;
@@ -70,6 +70,8 @@ int engine_event()
             flood(TYPE_LSA,engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
             sequence_number++;
 			
+	    tv.tv_sec = 5;
+//TIMEOUT;
 			/*
             //!!!! for all neighbors, flood a type-3 lsa for all down neighbors
             for(i =1; i < dl.num_links; i++)
@@ -96,42 +98,44 @@ int engine_event()
 
          /* If an ACK has not been received by not, retransmit */
          // !!!! changed == to <= .. want to retransmit first 3 iterations after flooding
-         if (iterations <= RETRANSMIT_TIME)
+         if (iterations != 0 && iterations <= RETRANSMIT_TIME)
          {
 
             for (i = 0; i < rt.num_entry; i++)
             {
                entry = rt.table[i];
+               
                retransmit_missing(engine.udp_sock,entry.lsa,&dl,&rt,entry.lsa_size,entry.forwarder_id);
 
             }
          }
 
          iterations++;
-      }else{
-
-         for (i = 0; i < engine.fdmax + 1; i++)
+     
+      }
+      
+	for (i = 0; i < engine.fdmax + 1; i++)
+      {
+         if (FD_ISSET(i, &engine.temp_rfds))
          {
-            if (FD_ISSET(i, &engine.temp_rfds))
+            if (recv_handler(i) < 1)
             {
-               if (recv_handler(i) < 1)
-               {
-                  continue;
-               }
-               
+               continue;
             }
+               
+         }
 
-            if (FD_ISSET(i, &engine.temp_wfds))
+         if (FD_ISSET(i, &engine.temp_wfds))
+         {
+            if (send_handler(i) < 1)
             {
-               if (send_handler(i) < 1)
-               {
-                  continue;
-               }else{
-                  FD_CLR(i,&engine.wfds);
-               }
+               continue;
+            }else{
+               FD_CLR(i,&engine.wfds);
             }
          }
       }
+     
    }
 }
 

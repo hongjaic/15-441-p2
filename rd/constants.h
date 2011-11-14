@@ -5,7 +5,7 @@
 #define BUF_SIZE            1024
 #define FLOODING_PERIOD     30
 #define TIMEOUT             1
-#define RETRANSMIT_TIME     2
+#define RETRANSMIT_TIME     10
 #define MAX_CONNECTIONS     1024
 
 // file_loader.h

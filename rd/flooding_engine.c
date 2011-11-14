@@ -77,6 +77,7 @@ void update_entry(routing_entry *entry, routing_table *rt, direct_links *dl, LSA
         curr_checkers->checkers[i].id = dl->links[i].id;
         curr_checkers->checkers[i].ack_received = ACK_RECEIVED;
         curr_checkers->checkers[i].retransmit = 0;
+	
     }
 
     if (type == TYPE_LSA)
@@ -102,17 +103,19 @@ void update_entry(routing_entry *entry, routing_table *rt, direct_links *dl, LSA
             }
         }
 
-	   if(entry->node_status == STATUS_DOWN){
+	   	if(entry->node_status == STATUS_DOWN){
 	   	   printf("node %d is up\n",entry->id);       
 	   	}
 	   	 entry->node_status = STATUS_UP;
     	
     }
-    else if (type == TYPE_DOWN)
+    
+    if (type == TYPE_DOWN)
     {
         entry->node_status = STATUS_DOWN;
+    }else{
+        entry->node_status = STATUS_UP;
     }
-
     entry->lsa_is_new = 1;
     entry->lsa_size = lsa_size;
     entry->forwarder_id = nexthop;
@@ -150,7 +153,7 @@ link_entry *lookup_link_entry(direct_links *dl, struct sockaddr_in *cli_addr)
     link_entry entry;
 
     num_links = dl->num_links;
-    for (i = 0; i < num_links; i++)
+    for (i = 1; i < num_links; i++)
     {
         entry = (dl->links)[i];
 
@@ -356,9 +359,9 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
     type = GET_TYPE(lsa->version_ttl_type);
     entry = get_routing_entry(rt, lsa->sender_node_id);
 
-    if(entry->lsa!= NULL && lsa->sequence_num < entry->lsa->sequence_num){
+    if(entry->lsa!= NULL && ((type == TYPE_LSA && lsa->sequence_num <= entry->lsa->sequence_num) || (type == TYPE_ACK && lsa->sequence_num != rt->table[0].lsa->sequence_num))){
        // !!! not a new lsa . ignore!
-       printf("ignoring lsa from node %d\n",lsa->sender_node_id);
+       printf("ignoring lsa type %d seq num %d from node %d\n",GET_TYPE(lsa->version_ttl_type),lsa->sequence_num,lsa->sender_node_id);
       return -1;
     }
 
@@ -367,10 +370,10 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
 
         update_entry(entry, rt, dl, lsa, lsa_size, forwarder_id);
         lsa->version_ttl_type = SET_TYPE(lsa->version_ttl_type,TYPE_ACK);
- 		lsa->sender_node_id = dl->links[0].id;
+ 	lsa->sender_node_id = dl->links[0].id;
         src_link = lookup_link_entry_node_id(dl,entry->id);
         rt_sendto(sockfd, lsa, src_link->host, src_link->route_p, lsa_size);
-        printf("sending ack to node %d\n",src_link->id);
+        printf("sending ack %d to node %d\n",lsa->sequence_num,src_link->id);
 
         //flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
 	// !!! commented out above line, we shouldn't flood anything here.... flooding is done in select-loop
@@ -388,10 +391,10 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
         {
             if (entry->checkers_list->checkers[i].id == forwarder_id)
             {
-        		printf("received ACK from node %d\n",forwarder_id);	
-                entry->checkers_list->checkers[i].ack_received = ACK_RECEIVED;
-                entry->checkers_list->checkers[i].retransmit = 0;
-
+        		printf("received ACK %d from node %d\n",lsa->sequence_num,forwarder_id);	
+                rt->table[0].checkers_list->checkers[i].ack_received = ACK_RECEIVED;
+                rt->table[0].checkers_list->checkers[i].retransmit = 0;
+		
             }
         }
     }
@@ -429,7 +432,7 @@ int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_
             if (lsa_type == TYPE_DOWN){
                printf("sending NODE %d DOWN to node %d\n",dl->links[i].id,node_id);
             }else{
-               printf("sending my LSA to node %d\n",dl->links[i].id);
+               printf("sending my LSA %d to node %d\n",lsa->sequence_num,dl->links[i].id);
             }
             port = ((dl->links)[i]).route_p;
             host = ((dl->links)[i]).host;
@@ -470,7 +473,7 @@ void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *r
             if (curr_checkers->checkers[i].ack_received == ACK_NOT_RECEIVED)
             {
                 entry = get_routing_entry(rt, node_id);
-                if(curr_checkers->checkers[i].retransmit == RETRANSMIT_TIME)
+                if(curr_checkers->checkers[i].retransmit >= RETRANSMIT_TIME -1)
                 {
                    entry->node_status = STATUS_DOWN;
                    printf("Node %d is down!!!\n",node_id);
@@ -481,9 +484,9 @@ void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *r
                 {
                     port = ((dl->links)[i]).route_p;
                     host = ((dl->links)[i]).host;
-                    //rt_sendto(sockfd, lsa, host, port, lsa_size);
+                    rt_sendto(sockfd, lsa, host, port, lsa_size);
                     curr_checkers->checkers[i].retransmit++;
-                    printf("retransmition #%d: %d's LSA to link %d\n",curr_checkers->checkers[i].retransmit,lsa->sender_node_id,node_id);
+                    printf("retransmition #%d: %d's LSA %d to link %d\n",curr_checkers->checkers[i].retransmit,lsa->sender_node_id,lsa->sequence_num,node_id);
                 }
             }
         }
