@@ -36,11 +36,11 @@ int engine_event()
    int i, iterations = RETRANSMIT_TIME+1;
    int sel_return = -1;
    struct timeval tv;
-   tv.tv_sec = 5;//TIMEOUT;
+   tv.tv_sec = TIMEOUT;
    tv.tv_usec = 0;
 
    routing_entry entry;
-   printf("listening...\n");
+   printf("my node id %d\n",my_node_id);
    while (1)
    {
       engine.temp_rfds = engine.rfds;
@@ -70,7 +70,7 @@ int engine_event()
             flood(TYPE_LSA,engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
             sequence_number++;
 			
-	    tv.tv_sec = 5;
+	    tv.tv_sec = TIMEOUT;
 //TIMEOUT;
 			/*
             //!!!! for all neighbors, flood a type-3 lsa for all down neighbors
@@ -88,7 +88,7 @@ int engine_event()
             {
                entry = (rt.table[i]);
 
-               if (entry.lsa_is_new == 1)
+               if (entry.lsa_is_new == 1 && entry.node_status == STATUS_UP)
                {
                   flood_received_lsa(engine.udp_sock, entry.lsa, &dl, &rt, entry.lsa_size, entry.forwarder_id);
                }

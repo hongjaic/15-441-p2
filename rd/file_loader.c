@@ -33,9 +33,10 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
         i = 0;
         tokens[i] = strtok(line, " ");
 
-        while (tokens[i] != NULL)
+        while (i < 5)
         {
             i++;
+	    
             tokens[i] = strtok(NULL, " ");
         }
 

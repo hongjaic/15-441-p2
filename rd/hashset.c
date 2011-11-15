@@ -131,7 +131,11 @@ int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
     return 1;
 }
 
-int hash_remove(liso_hash *h, char *obj_name)
+int hash_remove_value(liso_hash *h, int id)
+{
+	return 0;
+}
+int hash_remove_object(liso_hash *h, char *obj_name)
 {
     pair *iter = NULL;
     pair *prev = NULL;
