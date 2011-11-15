@@ -70,7 +70,7 @@ int engine_event()
             flood(TYPE_LSA,engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
             sequence_number++;
 			
-	    tv.tv_sec = TIMEOUT;
+	        tv.tv_sec = TIMEOUT;
 //TIMEOUT;
 			/*
             //!!!! for all neighbors, flood a type-3 lsa for all down neighbors
@@ -87,13 +87,29 @@ int engine_event()
             for (i = 1; i < rt.num_entry; i++)
             {
                entry = (rt.table[i]);
-
-               if (entry.lsa_is_new == 1 && entry.node_status == STATUS_UP)
+               
+               if (entry.lsa_is_new == 1 && entry.node_status != STATUS_DOWN)
                {
                   flood_received_lsa(engine.udp_sock, entry.lsa, &dl, &rt, entry.lsa_size, entry.forwarder_id);
                }
+               if (entry.node_status != STATUS_DOWN)
+               {
+                    rt.table[i].node_status--;
+                    if(rt.table[i].node_status == STATUS_DOWN)
+                    {
+                        if(rt.table[i].lsa != NULL)
+                        {
+                            free(rt.table[i].lsa);
+                        }   
+                        rt.table[i].lsa = NULL;
+                        printf("NODE %d is DOWN!!!\n",rt.table[i].id);
+                    }
+               }
+
+
             }
             iterations = 0;
+            
          }
 
          /* If an ACK has not been received by not, retransmit */

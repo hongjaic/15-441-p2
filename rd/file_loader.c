@@ -57,7 +57,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
         }
 
         ((rt->table)[j]).cost = k;
-        ((rt->table)[j]).node_status = STATUS_UP;
+        ((rt->table)[j]).node_status = 3;
         ((rt->table)[j]).lsa = NULL;
         ((rt->table)[i]).lsa_is_new = 0;
         ((rt->table)[i]).lsa_size = 0;
