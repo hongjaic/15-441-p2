@@ -79,26 +79,25 @@ int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
 
     if ((dom = contains_object(h, obj_name)) != NULL)
     {
-        path *newpath = malloc(sizeof(path));
-        newpath->node_id = node_id;
-        newpath->cost = cost;
-        newpath->next_path_s = NULL;
-
         curr_nearest = dom->path_s;
         
         if (curr_nearest == NULL)
         {
+            path *newpath = malloc(sizeof(path));
+            newpath->node_id = node_id;
+            newpath->cost = cost;
+            newpath->next_path_s = NULL;
             dom->path_s = newpath;
         }
         else if (curr_nearest->cost > cost)
         {
-            newpath->next_path_s = curr_nearest;
+            path *newpath = malloc(sizeof(path));
+            newpath->node_id = node_id;
+            newpath->cost = cost;
+            newpath->next_path_s = NULL;
+
+            free(curr_nearest);
             dom->path_s = newpath;
-        }
-        else
-        {
-            newpath->next_path_s = curr_nearest->next_path_s;
-            curr_nearest->next_path_s = newpath;
         }
 
         return 1;
@@ -131,10 +130,43 @@ int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
     return 1;
 }
 
-int hash_remove_value(liso_hash *h, int id)
+int hash_remove_node(liso_hash *h, int node_id)
 {
-	return 0;
+    char *obj_name;
+    int i, hash_index, num_objs = h->num_objs;
+    pair *iter = NULL;
+
+    if (num_objs == 0)
+    {
+        return 1;
+    }
+
+    for (i = 0; i < num_objs; i++)
+    {
+        obj_name = (h->obj_names)[i];
+        hash_index = super_fast_hash(obj_name, (int)strlen(obj_name))%HASHSIZE;
+
+        iter = (h->hash)[hash_index];
+
+        while (iter != NULL)
+        {
+            if (strcmp(obj_name, iter->obj_name) == 0)
+            {
+                if(iter->path_s->node_id == node_id)
+                {
+                    free(iter->path_s);
+                    iter->path_s = NULL;
+                }
+                break;
+            }
+            
+            iter = iter->next_pair_s;
+        }
+    }
+
+    return 1;
 }
+
 int hash_remove_object(liso_hash *h, char *obj_name)
 {
     pair *iter = NULL;
