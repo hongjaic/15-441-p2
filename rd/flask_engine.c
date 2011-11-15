@@ -267,6 +267,7 @@ void build_response(tcp_connection *connection)
 {
     FILE *fp;
     path *obj;
+    pair *p;
     routing_entry * r_entry;
     link_entry * l_entry;
     char uri[BUF_SIZE];
@@ -321,9 +322,9 @@ void build_response(tcp_connection *connection)
     }
     else if (strcmp(connection->method, "ADDFILE")== 0)
     {
-        obj = contains_object(&gol, connection->name);
+        p = contains_object(&gol, connection->name);
 
-        if(obj != NULL)
+        if(p!= NULL)
         {
             connection->status = 500;
             sprintf(connection->response, "ERROR 19 File already exists ");

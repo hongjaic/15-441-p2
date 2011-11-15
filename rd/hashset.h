@@ -51,7 +51,7 @@ void init_hash(liso_hash *h);
 pair *contains_object(liso_hash *h, char *obj_name);
 path *get_paths(liso_hash *h, char *obj_name);
 int hash_add(liso_hash *h, char *obj_name, int node_id, int cost);
-int hash_remove_value(liso_hash *h , int id);
+int hash_remove_node(liso_hash *h , int id);
 int hash_remove_object(liso_hash *h, char *obj_name);
 int collapse(liso_hash *h);
 void printPairs(liso_hash *h);

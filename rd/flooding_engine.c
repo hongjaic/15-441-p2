@@ -20,7 +20,7 @@ void store_node_objects(liso_hash *ht,LSA *lsa)
         lsa_index+=4;
         strncpy(object,lsa->links_objects+lsa_index,*object_len);
         object[*object_len]='\0';
-        lsa_index++;
+        lsa_index+= *object_len;
         hash_add(ht,object, lsa->sender_node_id,DEFAULT_TTL - GET_TTL(lsa->version_ttl_type)+1);
   
     }
@@ -409,7 +409,7 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht)
  	lsa->version_ttl_type = SET_TYPE(lsa->version_ttl_type, tmp_type);	 
         printf("received LSA %d from node %d\nsending ACK %d to node %d\n",lsa->sequence_num,lsa->sender_node_id,lsa->sequence_num,src_link->id);
         update_entry(entry, rt, dl, lsa, lsa_size, forwarder_id);
-	store_node_objects(ht,lsa);        
+	//store_node_objects(ht,lsa);        
         //flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
 	// !!! commented out above line, we shouldn't flood anything here.... flooding is done in select-loop
     }
@@ -515,7 +515,7 @@ void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *r
 		   }
 		   entry->lsa = NULL;
                    entry->node_status = STATUS_DOWN;
-                   hash_remove_value(ht,entry->id);
+                   hash_remove_node(ht,entry->id);
                    printf("Node %d is down!!!\n",node_id);
                    curr_checkers->checkers[i].ack_received = ACK_RECEIVED;
 		  
@@ -523,7 +523,8 @@ void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *r
                 }else if (entry->node_status != STATUS_DOWN)
                 {
                     port = ((dl->links)[i]).route_p;
-                    host = ((dl->links)[i]).host;
+                    
+	            host = ((dl->links)[i]).host;
                     rt_sendto(sockfd, lsa, host, port, lsa_size);
                     curr_checkers->checkers[i].retransmit++;
                     printf("retransmition #%d: %d's LSA %d to link %d\n",curr_checkers->checkers[i].retransmit,lsa->sender_node_id,lsa->sequence_num,node_id);
