@@ -31,7 +31,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     int num_entry;
     ack_checkers *checkers_j;
 
-    char hos    tname[MAX_LINE];
+    char hostname[MAX_LINE];
 
     if (path == NULL)
     {
