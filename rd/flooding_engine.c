@@ -119,7 +119,7 @@ void update_entry(routing_entry *entry, routing_table *rt, direct_links *dl, LSA
         if(entry->node_status == STATUS_DOWN){
             printf("node %d is up\n",entry->id);       
         }
-        entry->node_status = 3;
+        entry->node_status = RETRANSMIT_TIME;
 
 
 

@@ -50,7 +50,7 @@ if localhost == '127.0.0.1':
     output = commands.getoutput('/sbin/ifconfig')
     localhost = parseaddress(output)
 
-conffile = open('node1.conf')
+conffile = open(sys.argv[1])
 conffirstline = conffile.readline()
 localconf = conffirstline.split()
 
@@ -92,11 +92,14 @@ def rd_getrd(obj):
 
     status = responsewords[0]
     url_len = responsewords[1]
-    url = responsewords[2][:-1]
+    url = responsewords[2]
 
     if status == 'OK':
-        the_file = urllib.urlopen(url)
-        resp = flask.send_file(the_file)
+        try:
+            the_file = urllib.urlopen(url)
+            resp = flask.send_file(the_file)
+        except:
+            resp = flask.make_response(flask.render_template('500InternalServerError.html'), 500)
     elif status == 'NOTFOUND':
         resp = flask.make_response(flask.render_template('404.html'), 404)
     else:
@@ -140,7 +143,9 @@ def rd_addfile():
     objlen = str(len(obj))
     final = str(finalname)
     finallen = str(len(final))
-    rdsock.send('ADDFILE ' + objlen +' '+obj+' '+final+' '+finallen)
+    msg = 'ADDFILE ' + objlen +' '+obj+' '+finallen+' '+final
+    print msg
+    rdsock.send(msg)
 
     rdresponse = rdsock.recv(4096)
 

@@ -66,11 +66,11 @@ int engine_event()
          /* It's time to flood */
          if (iterations == FLOODING_PERIOD)
          {
+             printf("!\n!!!!\n!!!!!!\n!!!!!!\n!!!!!!!!!\n!!!!!!!!!!\n!!!!!!!!!\n!!!!!!\n");
             //Flood our own LSA
             flood(TYPE_LSA,engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
             sequence_number++;
 			
-	        tv.tv_sec = TIMEOUT;
 //TIMEOUT;
 			/*
             //!!!! for all neighbors, flood a type-3 lsa for all down neighbors
@@ -97,6 +97,7 @@ int engine_event()
                     rt.table[i].node_status--;
                     if(rt.table[i].node_status == STATUS_DOWN)
                     {
+                        hash_remove_node(&gol,rt.table[i].id);
                         if(rt.table[i].lsa != NULL)
                         {
                             free(rt.table[i].lsa);
@@ -128,6 +129,7 @@ int engine_event()
 
          iterations++;
      
+	        tv.tv_sec = TIMEOUT;
       }
       
 	for (i = 0; i < engine.fdmax + 1; i++)

@@ -154,6 +154,7 @@ int flask_request_handler(int i)
     if (no_data_read == 0)
      {
         memcpy(curr_connection->request, engine.buf, readret);
+        printf("received request: %s\n",curr_connection->request);
         curr_connection->request_index = readret;
         curr_connection->status = 200;
         process_buffer(curr_connection, i);
@@ -311,7 +312,7 @@ void build_response(tcp_connection *connection)
                 r_entry = get_routing_entry(&rt, node_id);
                 l_entry = lookup_link_entry_node_id(&dl, r_entry->nexthop);
 
-                sprintf(uri, "http://%s:%d/rd/%d/%s", l_entry->host, l_entry->server_p, l_entry->local_p, connection->name);
+                sprintf(uri, "http://%s:%d/static/f/%s", l_entry->host, l_entry->server_p, connection->name);
 
             }
 
@@ -324,7 +325,7 @@ void build_response(tcp_connection *connection)
     {
         p = contains_object(&gol, connection->name);
 
-        if(p!= NULL)
+        if(p!= NULL )
         {
             connection->status = 500;
             sprintf(connection->response, "ERROR 19 File already exists ");
@@ -339,10 +340,11 @@ void build_response(tcp_connection *connection)
             fp = fopen(filefile, "a");
             fprintf(fp, "%s %s\n", connection->name, connection->path);
 
+            fclose(fp);
             connection->status = 200;
             sprintf(connection->response, "OK 0 ");
         }
     }
-
+    printf("response is %s\n",connection->response);
     connection->response_index = strlen(connection->response);
 }

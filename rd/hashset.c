@@ -151,8 +151,8 @@ int hash_remove_node(liso_hash *h, int node_id)
         while (iter != NULL)
         {
             if (strcmp(obj_name, iter->obj_name) == 0)
-            {
-                if(iter->path_s->node_id == node_id)
+            { 
+                if(iter->path_s != NULL && iter->path_s->node_id == node_id)
                 {
                     free(iter->path_s);
                     iter->path_s = NULL;
