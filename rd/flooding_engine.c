@@ -6,6 +6,28 @@
  */
 
 #include "flooding_engine.h"
+void store_node_objects(liso_hash *ht,LSA *lsa)
+{
+   int i; 
+   char object[MAX_OBJ_LEN];
+   int num_links = lsa->num_links;
+   int lsa_index = num_links << 2;
+   int *object_len;
+    for (i =0; i< lsa->num_objects;i++)
+    {
+
+        object_len =(int *)(lsa->links_objects+lsa_index);
+        lsa_index+=4;
+        strncpy(object,lsa->links_objects+lsa_index,*object_len);
+        object[*object_len]='\0';
+        lsa_index++;
+        hash_add(ht,object, lsa->sender_node_id,DEFAULT_TTL - GET_TTL(lsa->version_ttl_type)+1);
+  
+    }
+
+
+}
+
 
 int flooding_engine_create()
 {
@@ -98,7 +120,7 @@ void update_entry(routing_entry *entry, routing_table *rt, direct_links *dl, LSA
    	   printf("node %d is up\n",entry->id);       
    	}
    	 entry->node_status = STATUS_UP;
-
+          
     	
     }
    /* 
@@ -353,7 +375,7 @@ void send_ack(LSA *lsa){
    forwards lsa to all its other neighbors.
    cd
    */
-int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
+int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht)
 {
     int forwarder_id;
     int type;
@@ -387,7 +409,7 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt)
  	lsa->version_ttl_type = SET_TYPE(lsa->version_ttl_type, tmp_type);	 
         printf("received LSA %d from node %d\nsending ACK %d to node %d\n",lsa->sequence_num,lsa->sender_node_id,lsa->sequence_num,src_link->id);
         update_entry(entry, rt, dl, lsa, lsa_size, forwarder_id);
-        
+	store_node_objects(ht,lsa);        
         //flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
 	// !!! commented out above line, we shouldn't flood anything here.... flooding is done in select-loop
     }
@@ -443,7 +465,7 @@ int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_
         {
 
             if (lsa_type == TYPE_DOWN){
-               printf("sending NODE %d DOWN to node %d\n",dl->links[i].id,node_id);eending
+               printf("sending NODE %d DOWN to node %d\n",dl->links[i].id,node_id);
             }else{
                printf("sending my LSA %d to node %d\n",lsa->sequence_num,dl->links[i].id);
             }
@@ -461,7 +483,7 @@ int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_
     return 1;
 }
 
-void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
+void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id,liso_hash *ht)
 {
     int i, num_links;
     int port;

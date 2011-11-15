@@ -105,7 +105,7 @@ int engine_event()
             {
                entry = rt.table[i];
                
-               retransmit_missing(engine.udp_sock,entry.lsa,&dl,&rt,entry.lsa_size,entry.forwarder_id);
+               retransmit_missing(engine.udp_sock,entry.lsa,&dl,&rt,entry.lsa_size,entry.forwarder_id,&gol);
 
             }
          }
@@ -143,7 +143,7 @@ int recv_handler(int i)
 {
    if (i == engine.udp_sock)
    {
-      return lsa_handler(i, &dl, &rt);
+      return lsa_handler(i, &dl, &rt, &gol);
    }
    else if (i == engine.tcp_sock)
    {

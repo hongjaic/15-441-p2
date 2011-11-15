@@ -12,6 +12,7 @@
 #include "direct_links.h"
 #include "local_objects.h"
 #include "routing_table.h"
+#include "hashset.h"
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>
@@ -49,9 +50,9 @@ LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_l
 char *get_neighbor_address(int node_id);
 int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num);
 int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id);
-void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id);
+void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id,liso_hash *ht);
 LSA *rt_recvfrom(int sockfd, int *forwarder_id, direct_links *dl, int *lsa_size);
 int rt_sendto(int sockfd, LSA *lsa, char *host, int port, int size);
-int lsa_handler(int sockfd, direct_links *dl, routing_table *rt);
+int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht);
 
 #endif

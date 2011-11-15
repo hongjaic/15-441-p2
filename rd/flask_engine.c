@@ -321,7 +321,7 @@ void build_response(tcp_connection *connection)
     }
     else if (strcmp(connection->method, "ADDFILE")== 0)
     {
-        obj = get_paths(&gol, connection->name);
+        obj = contains_object(&gol, connection->name);
 
         if(obj != NULL)
         {
