@@ -1,34 +1,22 @@
 /**
  * CS 15-441 Computer Networks
  *
+ * Functions logic to handle routing.
+ *
  * @file    flooding_engine.c
  * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
  */
 
 #include "flooding_engine.h"
-void store_node_objects(liso_hash *ht,LSA *lsa)
-{
-    int i; 
-    char object[MAX_OBJ_LEN];
-    int num_links = lsa->num_links;
-    int lsa_index = num_links << 2;
-    int *object_len;
-    for (i =0; i< lsa->num_objects;i++)
-    {
-
-        object_len =(int *)(lsa->links_objects+lsa_index);
-        lsa_index+=4;
-        strncpy(object,lsa->links_objects+lsa_index,*object_len);
-        object[*object_len]='\0';
-        lsa_index+= *object_len;
-        hash_add(ht,object, lsa->sender_node_id,DEFAULT_TTL - GET_TTL(lsa->version_ttl_type)+1);
-
-    }
 
 
-}
+void store_node_objects(liso_hash *ht,LSA *lsa);
 
 
+/*
+ * flooding_engine_create - Creates and sets up the udp socket required for
+ * flooding amongs routing daemons.
+ */
 int flooding_engine_create()
 {
     struct sockaddr_in serv_addr;
@@ -55,6 +43,17 @@ int flooding_engine_create()
     return 1;
 }
 
+/*
+ * update_entry - Looks at the lsa from other routing daemons and makes
+ * necessary updates to the routing table.
+ *
+ * @param entry     pointer to the routing entry that is to be updated
+ * @param rt        pointer to routing table
+ * @param dl        pointer to table of direct neighbors
+ * @param lsa       incomding LSA
+ * @param lsa_size  size of lsa
+ * @param nexthop   the node ide of the forwarder of the LSA
+ */
 void update_entry(routing_entry *entry, routing_table *rt, direct_links *dl, LSA *lsa, int lsa_size, int nexthop)
 {
     int old_cost;
@@ -156,6 +155,14 @@ void update_entry(routing_entry *entry, routing_table *rt, direct_links *dl, LSA
 }
 
 
+/*
+ * get_routing_entry - Given a node id, looks the corresponding entry in the routing table.
+ *
+ * @param rt        pointer to routing table
+ * @param node_id   node_id to be looked up for
+ * @return          routing entry that corresponds to node_id when successful,
+ *                  NULL otherwise
+ */
 routing_entry *get_routing_entry(routing_table *rt, int node_id)
 {
     int i, num_entry;
@@ -176,6 +183,16 @@ routing_entry *get_routing_entry(routing_table *rt, int node_id)
     return NULL;
 }
 
+
+/*
+ * lookup_link_entry - Given an ip address, looks up the corresponding entry in
+ * the direct neighbors table.
+ *
+ * @param dl        pointer to direct neighbors table
+ * @param cli_addr  struct that contains the ip address
+ * @return          direct neighbor corresponing to cli_addr when successful,
+ *                  NULL otherwise
+ */
 link_entry *lookup_link_entry(direct_links *dl, struct sockaddr_in *cli_addr)
 {
     int i, num_links;
@@ -197,6 +214,16 @@ link_entry *lookup_link_entry(direct_links *dl, struct sockaddr_in *cli_addr)
     return NULL;
 }
 
+
+/*
+ *  lookup_link_entry_node_id - Given a node id, returns the corresponding
+ *  direct neighbor.
+ *
+ *  @param dl       pointer to direct neighbors table
+ *  @param node_id  node_id to be looked up for
+ *  @return         direct neighbor corresponding to node_id when successful,
+ *                  otherwise NULL
+ */
 link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id)
 {
     int i, num_links;
@@ -216,10 +243,18 @@ link_entry *lookup_link_entry_node_id(direct_links *dl, int node_id)
     return NULL;
 }
 
-// !!! this function used to return int size, and we passed in LSA *lsa as a param.
-// not sure why it wasn't working, but the lsa was returning NULL. I have a hunch it was because of the whole lsa flexible structure
-// but idk why that should matter.... anyway, passing in lsa, and mallocing here  wasn't working. so instead, I pass in size, and simply return
-// the lsa. this works.
+
+/*
+ * create_packet - Creates an LSA packet that is to be flooded.
+ *
+ * @param size          pointer to the size of the LSA to be created
+ * @param type          type of the LSA to be created (LSA, ACK)
+ * @param node_id       node id of the sending node
+ * @param sequence_num  incremental sequence number
+ * @param dl            pointer to direct neighbors table
+ * @param ol            pointer to local objects table
+ * @return              created LSA packet
+ */
 LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_links *dl, local_objects *ol)
 {
     int i, name_len;
@@ -288,9 +323,13 @@ LSA * create_packet(int *size, int type, int node_id, int sequence_num, direct_l
     return lsa;
 }
 
+
 /*
- * Copies received bytes into packet.
+ * bytes_to_packet - Converts received bytes into LSA packet format.
  *
+ * @param buf   bytes
+ * @param size  size of buf
+ * @return      result LSA packet
  */
 LSA* bytes_to_packet(char *buf, int size)
 {
@@ -306,6 +345,16 @@ LSA* bytes_to_packet(char *buf, int size)
    returns pointer to that node.
    */
 
+/*
+ * rt_recvfrom - Wrapper for recv_from. Binds received LSA to the sender node
+ * and returns the pointer to it.
+ *
+ * @param sockfd        routing daemon socket identifier
+ * @param forwarder_id  pointer to the node id of the forwarder
+ * @param dl            pointer to direct neighbors table
+ * @param lsa_size      size of LSA received
+ * @return              the received LSA
+ */
 LSA *rt_recvfrom(int sockfd, int *forwarder_id, direct_links *dl, int *lsa_size)
 {
     struct sockaddr_in cli_addr;
@@ -341,10 +390,17 @@ LSA *rt_recvfrom(int sockfd, int *forwarder_id, direct_links *dl, int *lsa_size)
     return lsa;
 }
 
-/*
-   creates a UDP socket and sends the given string to the given node.
 
-*/
+/*
+ * rt_sendto - Wrapper function for sendto. Sends LSA packet.
+ * 
+ * @param sockfd    routing daemon socket identifier
+ * @param lsa       the LSA to be sent
+ * @param host      ip address of the node to send to
+ * @param port      port number of the node to send to
+ * @param size      size of lsa
+ * @return          actual number of sent bytes
+ */
 int rt_sendto(int sockfd, LSA *lsa, char *host, int port, int size)
 {
     struct sockaddr_in cli_addr;
@@ -364,18 +420,15 @@ int rt_sendto(int sockfd, LSA *lsa, char *host, int port, int size)
 }
 
 
-void send_ack(LSA *lsa){
-
-
-}
-
 /*
-   handler for any incoming lsa advertisements from other routing daemons.
-   receives the incoming lsa from a neighbor (forwarder_id)
-   decrements TTL.
-   forwards lsa to all its other neighbors.
-   cd
-   */
+ * lsa_handler - Handler for any incoming LSA from other nodes.
+ *
+ * @param sockfd    routing daemon socket identifier
+ * @param dl        pointer to direct neighbors table
+ * @param rt        pointer to routing table
+ * @param ht        pointer to objects hash table
+ * @return          1 when successful, othersize -1
+ */
 int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht)
 {
     int forwarder_id;
@@ -438,9 +491,18 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht)
     return 1;
 }
 
-// !!! changed flood_lsa, to a more general flood() function. this way we can use this function to flood our own LSAs, as well as flooding
-// when a neighbor is down tryied to merge this with flood_recevied_lsas, but it started getting ugly... too many params, stuff...
-// so just left it for now.
+
+/*
+ * flood - General purpose flooding method.
+ *
+ * @param lsa_type      type of LSA to be flooded
+ * @param sockfd        routing daemon socket identifier
+ * @param dl            pointer to direct neighbors table
+ * @param rt            pointer to routing table
+ * @param node_id       routing daemon node id
+ * @param sequence_num  incremental sequence number
+ * @return              1
+ */
 int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_table *rt, int node_id, int sequence_num)
 {
     int i, num_links;
@@ -484,7 +546,19 @@ int flood(int lsa_type,int sockfd, direct_links *dl, local_objects *ol, routing_
     return 1;
 }
 
-void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id,liso_hash *ht)
+
+/*
+ * retransmit_missing - Retransmits if no ACK is received.
+ *
+ * @param sockfd        routing daemon socket identifier
+ * @param lsa           lsa to be retransmitted
+ * @param dl            pointer to direct neihbors table
+ * @param rt            pointer to routing table
+ * @param lsa_size      size of lsa
+ * @param forwarder_id  node id of the forwarder of lsa
+ * @param ht            pointer to objects hash table
+ */
+void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id, liso_hash *ht)
 {
     int i, num_links;
     int port;
@@ -537,6 +611,16 @@ void retransmit_missing(int sockfd, LSA *lsa, direct_links *dl, routing_table *r
 }
 
 
+/*
+ * flood_received_lsa - Floods received LSA to other direct neighbors.
+ *
+ * @param sockfd    routing daemon socket identifier
+ * @param lsa       the LSA to be forwarded
+ * @param dl        pointer to direct neighbors table
+ * @param rt        pointer to routing table
+ * @param lsa_size  size of lsa
+ * @return          1
+ */
 int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt, int lsa_size, int forwarder_id)
 {
     int i, num_links;
@@ -574,4 +658,30 @@ int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt
     //free(lsa);
 
     return 1;
+}
+
+/*
+ * store_node_objects - Processes lsa and makes necessary updates to objects
+ * hash table.
+ *
+ * @param ht    pointer to objects hash table
+ * @param lsa   the LSA to be processed
+ */
+void store_node_objects(liso_hash *ht, LSA *lsa)
+{
+    int i; 
+    char object[MAX_OBJ_LEN];
+    int num_links = lsa->num_links;
+    int lsa_index = num_links << 2;
+    int *object_len;
+    for (i =0; i< lsa->num_objects;i++)
+    {
+
+        object_len =(int *)(lsa->links_objects+lsa_index);
+        lsa_index+=4;
+        strncpy(object,lsa->links_objects+lsa_index,*object_len);
+        object[*object_len]='\0';
+        lsa_index+= *object_len;
+        hash_add(ht,object, lsa->sender_node_id,DEFAULT_TTL - GET_TTL(lsa->version_ttl_type)+1);
+    }
 }

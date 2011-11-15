@@ -1,6 +1,8 @@
 /**
  * CS 15-441 Computer Networks
  *
+ * Functions to handle flask requests and responses.
+ *
  * @file    flask_engine.c
  * @author  Hong Jai Cho <hongjaic>, Raul Gonzales <rggonzal>
  */
@@ -25,6 +27,12 @@
 void process_buffer(tcp_connection *connection, int i);
 void build_response(tcp_connection *connection);
 
+/*
+ * flask_engine_create - Creates the server socket for routing daemon <-> flask
+ * communication.
+ *
+ * @return  1 on success. Simply exits on failure.
+ */
 int flask_engine_create()
 {
     struct sockaddr_in addr;
@@ -69,6 +77,13 @@ int flask_engine_create()
     return 1;
 }
 
+
+/*
+ * new_client_handler - Sets up new tcp (flask) connections.
+ *
+ * @param sock  tcp server socket identifier
+ * @return      1 when successful, -1 otherwise
+ */
 int new_client_handler(int sock)
 {
     // !!!!! for some reason the sock_addr_in was breaking CP1 functionality. I changed it to sock_Addr_storage jsut to check, cus I wasn't sure
@@ -113,6 +128,14 @@ int new_client_handler(int sock)
     return -1;
 }
 
+
+/*
+ * flask_request_handler - Processes incoming flask request. Pareses the
+ * request and builds response depending on process results.
+ *
+ * @param i client socket identifier
+ * @return  1 when successful, 0 otherwise
+ */
 int flask_request_handler(int i)
 {
     int no_data_read = 0;
@@ -152,7 +175,7 @@ int flask_request_handler(int i)
     }
 
     if (no_data_read == 0)
-     {
+    {
         memcpy(curr_connection->request, engine.buf, readret);
         printf("received request: %s\n",curr_connection->request);
         curr_connection->request_index = readret;
@@ -165,6 +188,14 @@ int flask_request_handler(int i)
     return 1;
 }
 
+
+/*
+ * flask_response_handler - Handles sending response to client and does
+ * necessary clean up.
+ *
+ * @param i client socket identifier
+ * @return  1 when successful. Simply exits when fatal error occurs.
+ */
 int flask_response_handler(int i)
 {
     int errnoSave;
@@ -189,17 +220,26 @@ int flask_response_handler(int i)
     }
 
     init_connection(curr_connection);
-  //  FD_CLR(i, &(engine.rfds));
-  //  FD_CLR(i, &(engine.wfds));
+    //  FD_CLR(i, &(engine.rfds));
+    //  FD_CLR(i, &(engine.wfds));
     //close(i);
 
     return 1;
 }
 
+
+/*
+ * process_buffer - Processes flask request and parses out the request method,
+ * object name length, and object names.
+ *
+ * @param connection    flask connection struct containing all necessary buffer
+ *                      for parsing
+ * @param i             client socket identifier
+ */
 void process_buffer(tcp_connection *connection, int i)
 {
     char *tokens[5];
-   // int j;
+    // int j;
 
     tokens[0] = strtok(connection->request, " ");
 
@@ -215,55 +255,69 @@ void process_buffer(tcp_connection *connection, int i)
     tokens[3] = strtok(NULL," ");
     tokens[4] = strtok(NULL," ");
     /* !!!!!
-    for (j = 1; j < 5; j++)
-    {
-        tokens[j] = strtok(NULL, " ");
-    }
+       for (j = 1; j < 5; j++)
+       {
+       tokens[j] = strtok(NULL, " ");
+       }
 
-    if (strcmp(tokens[0], "RDGET") == 0 || strcmp(tokens[0], "ADDFILE") == 0)
-    {
-        if (tokens[1] == NULL || (atoi(tokens[1]) != strlen(tokens[2])))
-        {
-            connection->status  = 500;
-            FD_SET(i, &(engine.wfds));
-            return;
-        }
+       if (strcmp(tokens[0], "RDGET") == 0 || strcmp(tokens[0], "ADDFILE") == 0)
+       {
+       if (tokens[1] == NULL || (atoi(tokens[1]) != strlen(tokens[2])))
+       {
+       connection->status  = 500;
+       FD_SET(i, &(engine.wfds));
+       return;
+       }
 
-        if (strcmp(tokens[0], "ADDFILE") == 0)
-        {
-            if (tokens[3] == NULL || (atoi(tokens[3]) != strlen(tokens[4])))
-            {
-                connection->status = 500;
-                FD_SET(i, &(engine.wfds));
-                return;
-            }
-        }
-    }
-   */
+       if (strcmp(tokens[0], "ADDFILE") == 0)
+       {
+       if (tokens[3] == NULL || (atoi(tokens[3]) != strlen(tokens[4])))
+       {
+       connection->status = 500;
+       FD_SET(i, &(engine.wfds));
+       return;
+       }
+       }
+       }
+       */
     strcpy(connection->method, tokens[0]);
     strcpy(connection->name_length, tokens[1]);
     strncpy(connection->name,tokens[2],atoi(tokens[1]));
     if (strcmp(tokens[0], "ADDFILE") == 0)
     {
         strcpy(connection->path_length, tokens[3]);
-       strncpy(connection->path, tokens[4],atoi(tokens[3]));
+        strncpy(connection->path, tokens[4],atoi(tokens[3]));
     }
 }
 
+
+/*
+ * get_local_file_path - 
+ *
+ * @param connection   
+ *
+ */
 void get_local_file_path(tcp_connection *connection)
 {
-   int i;
-   for (i = 0; i<ol.num_objects;i++)
-   {
-      if(strcmp(connection->name,ol.objects[i].name) == 0)
-      {
-         strcpy(connection->path,ol.objects[i].path);
-         return;
-      }
-   }
-   connection->path[0] = '\0';
+    int i;
+    for (i = 0; i<ol.num_objects;i++)
+    {
+        if(strcmp(connection->name,ol.objects[i].name) == 0)
+        {
+            strcpy(connection->path,ol.objects[i].path);
+            return;
+        }
+    }
+    connection->path[0] = '\0';
 }
 
+
+/*
+ * build_response - Builds response to send  back to flask.
+ *  
+ * @param connection    flask connection struct containing all necessary buffer
+ *                      for parsing
+ */
 void build_response(tcp_connection *connection)
 {
     FILE *fp;
@@ -300,11 +354,11 @@ void build_response(tcp_connection *connection)
             {
                 get_local_file_path(connection);
                 if(connection->path[0] == '\0'){
-                   connection->status = 500;
-                   sprintf(connection->response, "ERROR found object's host, but could not retrieve  path ");
+                    connection->status = 500;
+                    sprintf(connection->response, "ERROR found object's host, but could not retrieve  path ");
                 }else{
-                  sprintf(uri, "%s%s", my_uri, connection->path);
-               }
+                    sprintf(uri, "%s%s", my_uri, connection->path);
+                }
             }
             else
             {
@@ -318,7 +372,7 @@ void build_response(tcp_connection *connection)
 
             connection->status = 200;
             sprintf(connection->response, "OK %d %s ", (int)(strlen(uri)), uri);
-         }
+        }
 
     }
     else if (strcmp(connection->method, "ADDFILE")== 0)

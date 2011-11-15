@@ -1,6 +1,8 @@
 /**
  * CS 15-441 Computer Networks
  *
+ * Function definitions for hashset.c
+ *
  * @file    liso_hash.h
  * @author  Hong Jai Cho <hongjaic@andrew.cmu.edu>
  */

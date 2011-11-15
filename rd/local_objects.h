@@ -1,3 +1,12 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Struct definition for the local objects table.
+ *
+ * @file    local_objects.h
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #ifndef LOCAL_OBJECTS_H
 #define LOCAL_OBJECTS_H
 

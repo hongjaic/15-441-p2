@@ -1,6 +1,8 @@
 /**
  * CS 15-441 Computer Netwoks
  *
+ * Function definitions for flooding_engine.c
+ *
  * @file    flooding_engine.h
  * @author  Hong Jai Cho <hongjaic>, Raul Gonzales <rggonzal>
  */

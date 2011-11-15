@@ -1,3 +1,12 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Struct definition for an LSA packet.
+ *
+ * @file    lca.h
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #ifndef LSA_H
 #define LSA_H
 
@@ -13,11 +22,12 @@ typedef struct LSA
 } LSA;
 
 
-typedef struct store{
+typedef struct store
+{
    int num_lsa;
    LSA *lsa;
    LSA *next;
-}lsa_store;
+} lsa_store;
 #pragma pack()
 
 #endif

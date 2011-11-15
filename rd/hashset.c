@@ -1,12 +1,16 @@
 /**
  * CS 15-441 Computer Networks
  *
+ * Functions and logic for hashing objects for lookup.
+ *
  * @file    liso_hash.h
- * @author  Hong Jai Cho <hongjaic@andrew.cmu.edu>
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
  */
 
 #include "hashset.h"
 
+
+/* Helper functions */
 void free_header_link(pair *ptr);
 void free_path_link(path *ptr);
 int pathcmp(path *ptr1, path *ptr2);
@@ -16,6 +20,12 @@ pair *link_contains_obj(pair *ptr, char *obj_name);
 uint32_t super_fast_hash(const char *data, int len);
 void string_tolower(char *str);
 
+
+/*
+ * init_hash - Initilizes hash table h.
+ *
+ * @param h Hash table to initialize
+ */
 void init_hash(liso_hash *h)
 {
     int i;
@@ -28,6 +38,15 @@ void init_hash(liso_hash *h)
     h->num_objs = 0;
 }
 
+
+/*
+ * contains_object - Determines if hash table h contains object obj_name.
+ *
+ * @param h         pointer to objects hash table
+ * @param obj_name  name of object to lookup for
+ * @return          object struct containing object information when successful,
+ *                  otherwise NULL
+ */
 pair *contains_object(liso_hash *h, char *obj_name)
 {
     int hash_index;
@@ -44,6 +63,14 @@ pair *contains_object(liso_hash *h, char *obj_name)
     return link_contains_obj(ptr, obj_name);
 }
 
+
+/*
+ * get_paths - Gets the available next hops for object obj_name.
+ *
+ * @param h         pointer to objects hash table
+ * @param obj_name  name of object to lookup for
+ * @return          list of next hops when successful, othersise NULL
+ */
 path *get_paths(liso_hash *h, char *obj_name)
 {
     int hash_index;
@@ -69,6 +96,16 @@ path *get_paths(liso_hash *h, char *obj_name)
     return NULL;
 }
 
+
+/*
+ * hash_add - Hashes object obj_name into hash table h.
+ *
+ * @param h         pointer to objects hash table
+ * @param obj_name  name of object to hash
+ * @param node_id   next hop for obj_name
+ * @param cost      cost to node_id
+ * @return          1
+ */
 int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
 {
     int hash_index = -1;
@@ -130,6 +167,14 @@ int hash_add(liso_hash *h, char *obj_name, int node_id, int cost)
     return 1;
 }
 
+
+/*
+ * hash_remove_node - Removes next hop for node_id node for al objects.
+ *
+ * @param h         pointer to objects hash table
+ * @param node_id   node id of node to remove
+ * @return          1
+ */
 int hash_remove_node(liso_hash *h, int node_id)
 {
     char *obj_name;
@@ -167,6 +212,13 @@ int hash_remove_node(liso_hash *h, int node_id)
     return 1;
 }
 
+/*
+ * hash_remove_object - Removes object obj_name from hash table.
+ *
+ * @param h         pointer to objects hash table
+ * @param obj_name  objecct to remove
+ * @return          1 if remove successful, 0 if no match
+ */
 int hash_remove_object(liso_hash *h, char *obj_name)
 {
     pair *iter = NULL;
@@ -210,6 +262,13 @@ int hash_remove_object(liso_hash *h, char *obj_name)
     return 0;
 }
 
+
+/*
+ * collapse - Frees memeory allocated to hash table h.
+ *
+ * @param h pointer to object hash table
+ * @return  1 if successful, 0 if no objects are in hash table
+ */
 int collapse(liso_hash *h)
 {
     if (h->num_objs == 0)
@@ -225,6 +284,12 @@ int collapse(liso_hash *h)
     return 1;
 }
 
+
+/*
+ * printPairs - Prints all object->paths relations.
+ *
+ * @param h pointer to objects hash table
+ */
 void printPairs(liso_hash *h)
 {
     int i;
@@ -258,6 +323,12 @@ void printPairs(liso_hash *h)
     printf("\n");
 }
 
+
+/*
+ * free_header_link - Frees all memory allocated for a specific object
+ *
+ * @param ptr   pointer to object
+ */
 void free_header_link(pair *ptr)
 {
     pair *prev = NULL;
@@ -272,6 +343,13 @@ void free_header_link(pair *ptr)
     }
 }
 
+
+/*
+ * free_path_link - Frees all memory allocated to define the paths to a specific
+ * objects.
+ *
+ * @param ptr   pointer to nearest path
+ */
 void free_path_link(path *ptr)
 {
     path *prev = NULL;
@@ -285,6 +363,14 @@ void free_path_link(path *ptr)
     }
 }
 
+
+/*
+ * link_contains_paths - Determines wheter a path exists for a specific object.
+ *
+ * @param ptr   pointer to object
+ * @param paths pointer to path
+ * @return      1 if paths exists for ptr, otherwise -1
+ */
 int link_contains_paths(pair *ptr, path *paths)
 {
     pair *curr = ptr;
@@ -302,6 +388,14 @@ int link_contains_paths(pair *ptr, path *paths)
     return 0;
 }
 
+
+/*
+ * pathcmp - Compares two paths
+ *
+ * @param ptr1  pointer to path1
+ * @param ptr2  pointer to path2
+ * @return      1 if path1 and path2  are different, 0 if they are equal
+ */
 int pathcmp(path *ptr1, path *ptr2)
 {
     path *curr1 = ptr1;
@@ -336,6 +430,14 @@ int pathcmp(path *ptr1, path *ptr2)
     return 0;
 }
 
+
+/*
+ * link_contains_obje - Determines if list of objects contains object obj_name
+ *
+ * @param ptr       pointer to the header of link of objects
+ * @param obj_name  name of object to lookup for
+ * @return          pointer to obj_name if it is in the list, otherwise NULL
+ */
 pair *link_contains_obj(pair *ptr, char *obj_name)
 {
     pair *curr = ptr;
@@ -352,6 +454,13 @@ pair *link_contains_obj(pair *ptr, char *obj_name)
     return NULL;
 }
 
+
+/*
+ * remove_obj_from_objest - Removes object from objects keyset.
+ *
+ * @param h         pointer to objects hash table
+ * @param obj_name  name of object to remove
+ */
 void remove_obj_from_objset(liso_hash *h, char *obj_name)
 {
     int i;
@@ -364,6 +473,15 @@ void remove_obj_from_objset(liso_hash *h, char *obj_name)
     }
 }
 
+
+/*
+ * super_fast_hash - Paul Hsieh's super fast hash function.
+ *                   www.azillionmonkeys.com/qed/hash.html
+ *
+ * @param data  data to be hashed
+ * @param len   length of data
+ * @return      hash key value
+ */
 uint32_t super_fast_hash(const char * data, int len)
 {
     uint32_t hash = len, tmp;
@@ -409,6 +527,12 @@ uint32_t super_fast_hash(const char * data, int len)
     return hash;
 }
 
+
+/*
+ * string_tolower - Converts string to all lower cases.
+ *
+ * @param str   string to convert
+ */
 void string_tolower(char *str)
 {
     int i;

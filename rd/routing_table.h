@@ -1,3 +1,12 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Struct definition for the routing table.
+ *
+ * @file    routing_table.h
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #ifndef ROUTING_TABLE_H
 #define ROUTING_TABLE_H
 

@@ -1,19 +1,23 @@
+/**
+ * CS 15-441 Computer networks
+ *
+ * Collection of all constants.
+ *
+ * @file    constants.h
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-// engine_wrapper.h
 #define BUF_SIZE            1024
 #define FLOODING_PERIOD     10
 #define TIMEOUT             3
 #define RETRANSMIT_TIME     4
 #define MAX_CONNECTIONS     1024
 
-// file_loader.h
 #define MAX_LINE            1024
 
-// flask_engine.h
-
-// flooding_engine.h
 #define TYPE_LSA            0x00000000
 #define TYPE_ACK            0x00000001
 #define TYPE_DOWN           0x00000010
@@ -32,7 +36,6 @@
 #define LSA_SENT            1
 #define LSA_NOT_SENT        0
 
-// hashset.h
 #define HASHSIZE            9377
 #define MAXOBJNUM           9377
 #define MAXOBJNAME          64

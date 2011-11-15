@@ -1,3 +1,12 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Struct definition for flask tcp connections, used to maintain states.
+ *
+ * @file    tcp_connection.h
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #ifndef TCP_CONNECTION_H
 #define TCP_CONNECTION_H
 

@@ -1,3 +1,12 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Engine struct to maintain states of routing daemon.
+ *
+ * @file    engine_wrapper.h
+ * @Author  Hong Jai Cho <hongjaic>, Raul Gonzales <rggonzal>
+ */
+
 #ifndef ENGINE_WRAPPER_H
 #define ENGINE_WRAPPER_H
 

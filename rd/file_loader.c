@@ -1,6 +1,26 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Collection of functions that load configuration and file settings of routing
+ * daemon into useable data structures.
+ *
+ * @file    file_loader.c
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #include "file_loader.h"
 
 
+/*
+ * load_node_conf - Loads direct neighbor information from routing daemon
+ * node#.conf file.
+ *
+ * @param path  path of node#.conf file
+ * @param dl    pointer to direct neighbors table
+ * @param rt    pointer to routing table
+ * @param rt    storage for local routing daemon uri
+ * @return      1 when successful, otherwise -1
+ */
 int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri)
 {
     FILE *fp;
@@ -11,7 +31,7 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     int num_entry;
     ack_checkers *checkers_j;
 
-    char hostname[MAX_LINE];
+    char hos    tname[MAX_LINE];
 
     if (path == NULL)
     {
@@ -92,6 +112,16 @@ int load_node_conf(char *path, direct_links *dl, routing_table *rt, char *my_uri
     return 1;
 }
 
+
+/**
+ * load_node_file - Loads local oject files informaiton from node#.file file.
+ *
+ * @param path  path of node#.file file
+ * @param ol    pointer to local objects table
+ * @param gol   pointer to global objects hash table
+ * @param gol   local routing daemon node id
+ * @return      1 when successful, otherwise -1
+ */
 int load_node_file(char *path, local_objects *ol, liso_hash *gol, int my_node_id)
 {
     FILE *fp;

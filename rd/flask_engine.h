@@ -1,6 +1,8 @@
 /**
  * CS 15-441 Computer Networks
  *
+ * Function definitions for flask_engine.c
+ *
  * @file    flask_engine.h
  * @author  Hong Jai Cho <hongjaic>, Raul Gonzales <rggonzal>
  */

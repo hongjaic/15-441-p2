@@ -1,3 +1,12 @@
+/**
+ * CS 15-441 Computer Networks
+ *
+ * Function definitions for file_loader.c
+ *
+ * @file    file_loader.h
+ * @author  Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+ */
+
 #ifndef FILE_LOADER_H
 #define FILE_LOADER_H
 
