@@ -1,4 +1,21 @@
-our system is vulnerable to any kind of bad input. We are nit currently filtering user input and are directly putting the user submitted content into the url requests. for example, if a user submitted a field-name such as "a&b=c" then our system would send a request with uri:
+vulnerabilities.txt
+
+Authors: Hong Jai Cho <hongjaic>, Raul Gonzalez <rggonzal>
+
+CP1
+===
+
+Our system is vulnerable to any kind of bad input. We are nit currently 
+filtering user input and are directly putting the user submitted content into 
+the url requests. for example, if a user submitted a field-name such as "a&b=c" 
+then our system would send a request with uri:
 	?object=a&b=c
-if we had an element with name 'b' the user just modified it, even though we never gave the user the option to.
+if we had an element with name 'b' the user just modified it, even though we 
+never gave the user the option to.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+CP2
+===
+
 
