@@ -436,7 +436,7 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht)
     int lsa_size;
     LSA *lsa;
     int i;
-    int tmp_type;
+    int tmp_type, new_ttl;
     routing_entry * entry;
     link_entry *src_link;
     lsa = rt_recvfrom(sockfd, &forwarder_id, dl, &lsa_size);
@@ -462,6 +462,8 @@ int lsa_handler(int sockfd, direct_links *dl, routing_table *rt, liso_hash *ht)
         rt_sendto(sockfd, lsa, src_link->host, src_link->route_p, lsa_size);
         lsa->version_ttl_type = SET_TYPE(lsa->version_ttl_type, tmp_type);	 
         printf("received LSA %d from node %d\nsending ACK %d to node %d\n",lsa->sequence_num,lsa->sender_node_id,lsa->sequence_num,src_link->id);
+        new_ttl = GET_TTL(lsa->version_ttl_type) - 1;
+        lsa->version_ttl_type = SET_TTL(lsa->version_ttl_type, new_ttl);
         update_entry(entry, rt, dl, lsa, lsa_size, forwarder_id);
         store_node_objects(ht,lsa);        
         //flood_received_lsa(sockfd, lsa, dl, rt, lsa_size, forwarder_id);
@@ -627,11 +629,7 @@ int flood_received_lsa(int sockfd, LSA *lsa, direct_links *dl, routing_table *rt
     int port;
     char *host;
     int node_id;
-    int new_ttl;
     ack_checkers *curr_checkers;
-
-    new_ttl = GET_TTL(lsa->version_ttl_type) - 1;
-    lsa->version_ttl_type = SET_TTL(lsa->version_ttl_type, new_ttl);
 
     curr_checkers = get_routing_entry(rt, lsa->sender_node_id)->checkers_list;
 
