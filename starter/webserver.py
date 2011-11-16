@@ -81,11 +81,8 @@ def rd_getrd(obj):
 
     rdsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rdsock.connect((localhost,locport))
-    print 'connected'
     rdsock.send(msg)
-    print 'sent '+msg
     rdresponse = rdsock.recv(4096)
-    print 'recv '+rdresponse
     rdsock.close()
 
     responsewords = rdresponse.split(' ')
@@ -144,7 +141,6 @@ def rd_addfile():
     final = str(finalname)
     finallen = str(len(final))
     msg = 'ADDFILE ' + objlen +' '+obj+' '+finallen+' '+final
-    print msg
     rdsock.send(msg)
 
     rdresponse = rdsock.recv(4096)
