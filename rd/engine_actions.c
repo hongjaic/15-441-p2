@@ -44,8 +44,9 @@ int create_engine(int udp_port, int tcp_port)
 
 
 /*
- * engine_event - main enging event loop that handles routing and
- * routing daemon <-> flask communication
+ * engine_event - main engine event loop that handles routing and 
+ * routing daemon <-> flask communication. The select loop times out such that
+ * every timeout, we do all of our LSA flooding.
  */
 int engine_event()
 {
@@ -56,13 +57,11 @@ int engine_event()
     tv.tv_usec = 0;
 
     routing_entry entry;
-    printf("my node id %d\n",my_node_id);
     while (1)
     {
         engine.temp_rfds = engine.rfds;
         engine.temp_wfds = engine.wfds;
         sel_return = select(engine.fdmax + 1, &(engine.temp_rfds), &(engine.temp_wfds), NULL, &tv);
-        //sel_return = select(engine.fdmax + 1, &(engine.temp_rfds), &(engine.temp_wfds), NULL, NULL);
 
 
         if (sel_return == -1)
@@ -74,43 +73,31 @@ int engine_event()
             exit(EXIT_FAILURE);
         }
 
-        if (sel_return == 0)
+        //select timeout occurred
+        if (sel_return == 0) 
         {
-            //!!!!!!!!!!!!! big issue, we are flooding up to three different types of LSA in this loop. this means,
-            //we should be "saving" all three LSAs... this is a problem...
 
             /* It's time to flood */
             if (iterations == FLOODING_PERIOD)
             {
-                printf("!\n!!!!\n!!!!!!\n!!!!!!\n!!!!!!!!!\n!!!!!!!!!!\n!!!!!!!!!\n!!!!!!\n");
                 //Flood our own LSA
                 flood(TYPE_LSA,engine.udp_sock, &dl, &ol, &rt, my_node_id, sequence_number);
                 sequence_number++;
 
-                //TIMEOUT;
-                /*
-                //!!!! for all neighbors, flood a type-3 lsa for all down neighbors
-                for(i =1; i < dl.num_links; i++)
-                {
-                down_id = dl.links[i].id;
-                if (get_routing_entry(&rt,down_id)->node_status == STATUS_DOWN){
-                flood(TYPE_DOWN,engine.udp_sock, &dl, &ol, &rt, down_id, sequence_number);
-                sequence_number++;
-                }
-                }
-                */
-                //for all nodes, forward/flood their received LSAs....
                 for (i = 1; i < rt.num_entry; i++)
                 {
                     entry = (rt.table[i]);
 
                     if (entry.lsa_is_new == 1 && entry.node_status != STATUS_DOWN)
                     {
+                        //forward any LSA received to all other links
                         flood_received_lsa(engine.udp_sock, entry.lsa, &dl, &rt, entry.lsa_size, entry.forwarder_id);
                     }
                     if (entry.node_status != STATUS_DOWN)
                     {
                         rt.table[i].node_status--;
+
+                        //node is dead
                         if(rt.table[i].node_status == STATUS_DOWN)
                         {
                             hash_remove_node(&gol,rt.table[i].id);
@@ -119,7 +106,6 @@ int engine_event()
                                 free(rt.table[i].lsa);
                             }   
                             rt.table[i].lsa = NULL;
-                            printf("NODE %d is DOWN!!!\n",rt.table[i].id);
                         }
                     }
 
@@ -130,7 +116,6 @@ int engine_event()
             }
 
             /* If an ACK has not been received by not, retransmit */
-            // !!!! changed == to <= .. want to retransmit first 3 iterations after flooding
             if (iterations != 0 && iterations <= RETRANSMIT_TIME)
             {
 
