@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     create_engine(((dl.links)[0]).route_p, ((dl.links)[0]).local_p);
     engine_event();
 
-    collapse(&gol)
+    collapse(&gol);
+
     return 1;
 }

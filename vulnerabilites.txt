@@ -18,4 +18,9 @@ never gave the user the option to.
 CP2
 ===
 
-
+Our system is currently exposed to the general internet. Any person with the
+IP address and port f of our routing daemons can talk to the daemons directly.
+This is bad because our system is built on the assumption that Routing Daemons
+will only communicate with flask clients. This assumption relies on structured
+packets and protocls and if a host sends a "malformed" packet to a Routing
+daemon, the daemon will crash pretty hard.
