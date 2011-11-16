@@ -73,7 +73,6 @@ int flask_engine_create()
         exit(EXIT_FAILURE);
     }
 
-    printf("listening on %d\n",engine.tcp_port);
     return 1;
 }
 
@@ -100,8 +99,6 @@ int new_client_handler(int sock)
 
         if (client_sock < 0)
         {
-            printf("%d and %s\n",errno,strerror(errno));
-
             return -1;
         }
 
@@ -177,7 +174,6 @@ int flask_request_handler(int i)
     if (no_data_read == 0)
     {
         memcpy(curr_connection->request, engine.buf, readret);
-        printf("received request: %s\n",curr_connection->request);
         curr_connection->request_index = readret;
         curr_connection->status = 200;
         process_buffer(curr_connection, i);
@@ -214,15 +210,14 @@ int flask_response_handler(int i)
             close(engine.udp_sock);
             close(engine.tcp_sock);
             collapse(&gol);
-            printf("fatal error\n");
             exit(EXIT_FAILURE);
         }
     }
 
     init_connection(curr_connection);
-    //  FD_CLR(i, &(engine.rfds));
-    //  FD_CLR(i, &(engine.wfds));
-    //close(i);
+    FD_CLR(i, &(engine.rfds));
+    FD_CLR(i, &(engine.wfds));
+    close(i);
 
     return 1;
 }
@@ -239,7 +234,6 @@ int flask_response_handler(int i)
 void process_buffer(tcp_connection *connection, int i)
 {
     char *tokens[5];
-    // int j;
 
     tokens[0] = strtok(connection->request, " ");
 
@@ -254,32 +248,7 @@ void process_buffer(tcp_connection *connection, int i)
     tokens[2] = strtok(NULL," ");
     tokens[3] = strtok(NULL," ");
     tokens[4] = strtok(NULL," ");
-    /* !!!!!
-       for (j = 1; j < 5; j++)
-       {
-       tokens[j] = strtok(NULL, " ");
-       }
 
-       if (strcmp(tokens[0], "RDGET") == 0 || strcmp(tokens[0], "ADDFILE") == 0)
-       {
-       if (tokens[1] == NULL || (atoi(tokens[1]) != strlen(tokens[2])))
-       {
-       connection->status  = 500;
-       FD_SET(i, &(engine.wfds));
-       return;
-       }
-
-       if (strcmp(tokens[0], "ADDFILE") == 0)
-       {
-       if (tokens[3] == NULL || (atoi(tokens[3]) != strlen(tokens[4])))
-       {
-       connection->status = 500;
-       FD_SET(i, &(engine.wfds));
-       return;
-       }
-       }
-       }
-       */
     strcpy(connection->method, tokens[0]);
     strcpy(connection->name_length, tokens[1]);
     strncpy(connection->name,tokens[2],atoi(tokens[1]));
@@ -292,9 +261,11 @@ void process_buffer(tcp_connection *connection, int i)
 
 
 /*
- * get_local_file_path - 
+ * get_local_file_path - given a connection with a name, this function traverses
+ * the objects list until it finds the matching object name in the list. it
+ * inserts the local path to that object into the connection->path field.
  *
- * @param connection   
+ * @param connection connection
  *
  */
 void get_local_file_path(tcp_connection *connection)
@@ -399,6 +370,6 @@ void build_response(tcp_connection *connection)
             sprintf(connection->response, "OK 0 ");
         }
     }
-    printf("response is %s\n",connection->response);
+    
     connection->response_index = strlen(connection->response);
 }

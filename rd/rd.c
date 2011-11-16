@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
     sequence_number = 0;
 
     create_engine(((dl.links)[0]).route_p, ((dl.links)[0]).local_p);
-    printf("okkk...\n"); 
     engine_event();
 
+    collapse(&gol)
     return 1;
 }
